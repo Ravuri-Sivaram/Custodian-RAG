@@ -1,0 +1,196 @@
+# docker-compose.yml — Phase E+F (see docs/SCALE_OUT.md §5-E/§5-F):
+#   inference (GPU, 2x8B x1) / qdrant (server x1) / custodian (xN slim, no torch) / nginx (load balancing + unnoticed kills).
+# Start (single replica):   docker compose --env-file .env.compose up -d --build
+# Start (multiple replicas): docker compose --env-file .env.compose up -d --build --scale custodian=3
+# Entry point:               http://127.0.0.1:8080  (nginx; every client goes through it. custodian replicas only
+#              expose 8787 on the internal network, never publish a host port -> so --scale has no port
+#              conflict. Per the Phase F review: an earlier version in Phase E published 8787 directly from
+#              custodian, which conflicted with --scale; fixed by putting nginx in front.)
+# Verify a kill goes unnoticed: docker kill $(docker compose ps -q custodian | head -1)   # hit 8080 with continuous
+#              queries; nothing is noticeable besides the in-flight request on that replica
+# Stop:   docker compose down            (add -v to also delete Qdrant's persistent volume)
+# Note: run this from a WSL terminal throughout (bind mounts are Linux paths); .env.compose paths must be
+# on WSL ext4, never /mnt/c (see docs/SCALE_OUT.md §8, pitfall 2).
+services:
+
+  # ── Qdrant server: the only stateful piece, on a persistent volume, the single source of truth shared
+  #    across replicas (verified in Phase D) ──
+  qdrant:
+    image: qdrant/qdrant:v1.18.0            # matches the client's 1.18; the version was measured and pinned during Phase D
+    container_name: custodian-qdrant
+    restart: unless-stopped
+    volumes:
+      - qdrant-data:/qdrant/storage        # named volume, persistent (survives `down`; only `down -v` deletes it)
+    # Not published by default (reachable only inside custodian-net); open it up for external loading/
+    # troubleshooting if needed, but bind to loopback only -- never 0.0.0.0 unauthenticated:
+    # ports: ["127.0.0.1:6333:6333"]
+    healthcheck:                            # the qdrant image has no curl, so this probes via bash's /dev/tcp
+      test: ["CMD-SHELL", "bash -c ':> /dev/tcp/127.0.0.1/6333' || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+    networks: [custodian-net]
+
+  # ── inference: direct GPU passthrough, two resident 8B models, genuine readiness semantics ──
+  inference:
+    build: { context: ., dockerfile: Dockerfile.inference }
+    image: custodian-inference:0.3.0
+    container_name: custodian-inference
+    restart: unless-stopped
+    environment:
+      INFERENCE_HOST: "0.0.0.0"
+      INFERENCE_PORT: "8900"
+      INFERENCE_MAX_INFLIGHT: "${INFERENCE_MAX_INFLIGHT:-16}"   # backpressure (Phase F): the in-flight cap; once full, returns 503 overloaded (GPU forward passes are serialized, so a deep queue is pure waste)
+      INFERENCE_WARMUP_RETRIES: "${INFERENCE_WARMUP_RETRIES:-3}"  # retry count for a transient warm-up failure; once exhausted, os._exit(1) lets the restart policy bring it back up (self-healing)
+      # Pinning the 4090 to the GPU needs three layers, all required (a lesson learned the hard way on WSL2):
+      #  1) NVIDIA_VISIBLE_DEVICES/device_ids: the toolkit layer's device selection. **Not a hard isolation
+      #     under WSL2** (both cards were still visible in testing even with device=UUID set), so this alone
+      #     isn't enough -- it only isolates properly on a real Linux host.
+      #  2) CUDA_VISIBLE_DEVICES=<4090 UUID>: the CUDA runtime layer, pinning the 4090 as torch device 0.
+      #     **This is the real lock under WSL2.** dense.py hard-codes get_device_name(0) and asserts it
+      #     contains "4090" -- without this set, PCI_BUS_ID ordering can put a 5070 at device0, the assertion
+      #     fails, and the service never becomes ready.
+      #  3) gpu_name_must_contain="4090" (inside the app): the final assertion, rejecting the wrong card
+      #     outright (fail-fast rather than an OOM).
+      CUDA_VISIBLE_DEVICES: "${GPU_UUID}"            # the real lock: exposes only the 4090 to CUDA as device0 (this is the locking method the app's own error message recommends)
+      NVIDIA_VISIBLE_DEVICES: "${GPU_UUID}"          # the toolkit's device selection (only isolates on a non-WSL2 host); see .env.compose.example for how to get it
+      NVIDIA_DRIVER_CAPABILITIES: "compute,utility"
+    volumes:
+      # Models are mounted at /root/models (not /models): EmbedConfig hard-codes ~/models and doesn't read
+      # it from an env var ($HOME=/root in the container). Decided in §0.1.
+      - type: bind
+        source: ${MODELS_HOST_DIR}                    # must be WSL ext4! never /mnt/c
+        target: /root/models
+        read_only: true
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              device_ids: ["${GPU_UUID}"]             # pinned to exactly the 4090
+              capabilities: [gpu]
+    stop_grace_period: 30s                            # shutdown grace period (per the Phase F review): the 10s
+                                                       # default would SIGKILL an in-flight forward pass or warm-up
+    healthcheck:
+      # Genuine readiness: /readyz returns 503 until both 8B models finish warming up serially. The base
+      # image has curl (installed in the Dockerfile).
+      test: ["CMD", "curl", "-sf", "http://localhost:8900/readyz"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 600s                              # serially warming up two 8B models takes ~5 min; 600s
+                                                      # leaves headroom (corrected during the Phase F review):
+                                                      # NOTE -- correcting an earlier comment: once start_period has
+                                                      # elapsed, 3 consecutive probe failures mark it unhealthy, and
+                                                      # depends_on: service_healthy would then abort the whole `up`
+                                                      # and custodian would never start. So "a too-short value is
+                                                      # harmless" is wrong: if warm-up is slower than start_period
+                                                      # (a cold disk, a first-time download, an scipy compile), the
+                                                      # whole orchestration just hangs. The cost of a generous value
+                                                      # is zero (a first-try 200 flips to healthy immediately, so
+                                                      # there's no needless waiting), hence the loose 600s.
+                                                      # Only 3 consecutive 503s *after* warm-up completes (a dropped
+                                                      # card, an OOM) is a genuine unhealthy state -- go check the
+                                                      # GPU then, not this value.
+    ports:
+      - "127.0.0.1:8900:8900"                         # optional exposure (troubleshooting/standalone load testing); with multiple replicas, custodian reaches this over the internal DNS instead
+    networks: [custodian-net]
+
+  # ── custodian: slim, no torch, stateless (apart from the shared sidecar volume), can run xN ──
+  custodian:
+    build: { context: ., dockerfile: Dockerfile.custodian }
+    image: custodian-app:0.3.0
+    # NOTE: to use --scale custodian=N, container_name must NOT be set (it would conflict); keep it unset
+    restart: unless-stopped
+    stop_grace_period: 30s                            # shutdown grace period (per the Phase F review): the 10s
+    #   default would SIGKILL an in-flight /v1/ask (LLM generation commonly takes 30-120s). 30s here plus
+    #   uvicorn's timeout_graceful_shutdown=25 (in cli.py) -> a graceful drain before exit.
+    environment:
+      CUSTODIAN_INFERENCE_URL: "http://inference:8900"   # non-empty -> uses RemoteDense/Reranker (no GPU load)
+      CUSTODIAN_QDRANT_URL: "http://qdrant:6333"         # non-empty -> the server branch of store.py's three-way switch
+      CUSTODIAN_TENANT: "${CUSTODIAN_TENANT:-demo}"         # ACL identity (fail-closed: empty means every retrieval returns empty)
+      CUSTODIAN_COLLECTION: "${CUSTODIAN_COLLECTION:-real}"
+      CUSTODIAN_DENSE_DIM: "${CUSTODIAN_DENSE_DIM:-1024}"
+      # All replicas must use the SAME path, mounted from the SAME shared volume -- not derived from
+      # index_dir's default (that was the root cause of an earlier bug; see config.py). config.py reads
+      # these two env vars directly.
+      CUSTODIAN_SIDECAR_DIR: "/index/sidecar"
+      CUSTODIAN_INDEX_DIR: "/index"
+      CUSTODIAN_HOST: "0.0.0.0"                           # must be 0.0.0.0 inside the container (the 127.0.0.1 default only listens to itself -- no other container or nginx could reach it)
+      CUSTODIAN_PORT: "8787"
+      # The fail-closed startup guard (in service.py): binding to a non-loopback address (0.0.0.0) REQUIRES
+      # keys mode (legacy single-key mode is rejected) -- the whole library must never run unauthenticated
+      # and exposed to the network. Multiple replicas behind nginx is a team deployment, which should be
+      # in keys mode anyway. Generate one with:
+      #   PYTHONPATH=src python -m custodian keys new <name> --tenant demo   (writes into ${KEYS_HOST_FILE})
+      # Per the security review: the plaintext keys table must NEVER sit on the read-write data volume
+      # (/index) -- it's mounted separately, read-only (see volumes below), isolated from sidecar/logs.
+      # Even if a replica is compromised via RCE, it can only read the read-only key file, and writing
+      # through the data volume can't touch the identity table. Long-term this should store key hashes
+      # instead of plaintext.
+      CUSTODIAN_KEYS_FILE: "/run/custodian/keys.json"
+      DEEPSEEK_API_KEY: "${DEEPSEEK_API_KEY:-}"        # used by /v1/ask (config.py's llm_api_key_env defaults to this name); injected via .env, never baked into the image
+      CUSTODIAN_LLM_MODEL: "${CUSTODIAN_LLM_MODEL:-deepseek-v4-flash}"
+    # Each replica writes its logs into its own hostname subdirectory: $$HOSTNAME (escaped as a double $)
+    # is resolved by the shell running inside the container at runtime, taking THAT container's own
+    # hostname -- not interpolated by the compose host (which would give every replica the same name and
+    # let their JSONL logs interleave). `exec` preserves signal forwarding.
+    command: ["sh", "-c", "mkdir -p \"/index/custodian_logs/$$HOSTNAME\" && CUSTODIAN_LOG_DIR=\"/index/custodian_logs/$$HOSTNAME\" exec custodian serve"]
+    volumes:
+      # The entire /index shared volume (sidecar/ read-only at query time, plus each replica's own
+      # custodian_logs/ subdirectory). Phase E mounts the whole volume read-write (so logs can be
+      # written); Phase F splits it further into sidecar :ro + logs :rw as defense in depth.
+      - type: bind
+        source: ${INDEX_HOST_DIR}
+        target: /index
+      # Per the security review: the plaintext keys table is mounted separately, read-only, and kept off
+      # the read-write data volume above (defense in depth: writing through the data volume still can't
+      # touch the identity table).
+      - type: bind
+        source: ${KEYS_HOST_FILE}
+        target: /run/custodian/keys.json
+        read_only: true
+    depends_on:
+      qdrant:    { condition: service_healthy }
+      inference: { condition: service_healthy }        # only start custodian once inference's /readyz is green (the model is warm) -- avoids a 503 storm right at startup
+    healthcheck:
+      test: ["CMD", "curl", "-sf", "http://localhost:8787/readyz"]  # hits /readyz (which probes downstream), not /healthz
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 20s                                # slim image starts in seconds (no model loading)
+    expose:
+      - "8787"                                         # Phase F: exposed only inside custodian-net (no host port published) -> --scale has no port conflict; nginx is the entry point
+    networks: [custodian-net]
+
+  # ── nginx: load balancing across replicas + unnoticed docker kills (Phase F, the sole external entry point) ──
+  nginx:
+    image: nginx:1.27-alpine                           # `server ... resolve` needs nginx>=1.27.3 (the open-source build); alpine keeps it small
+    container_name: custodian-nginx
+    restart: unless-stopped
+    volumes:
+      - type: bind
+        source: ./deploy/nginx.conf
+        target: /etc/nginx/conf.d/default.conf
+        read_only: true
+    ports:
+      - "127.0.0.1:8080:80"                            # the sole external entry point; every client goes through http://127.0.0.1:8080
+    depends_on:
+      custodian: { condition: service_started }           # nginx doesn't wait for custodian to be healthy (it adapts passively via max_fails); it only needs the DNS name to resolve
+    healthcheck:
+      # Uses 127.0.0.1, not localhost: the config is mounted read-only, so the entrypoint script can't
+      # append `listen [::]:80`, and nginx only listens on ipv4; inside the container, localhost resolves
+      # to ipv6 ::1 first -> wget gets connection refused -> a false unhealthy reading even though the
+      # real service is fine. Pinning to ipv4 avoids that.
+      test: ["CMD", "wget", "-q", "-O", "-", "http://127.0.0.1/_nginx_health"]  # alpine's busybox wget; no curl available
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    networks: [custodian-net]
+
+networks:
+  custodian-net: { driver: bridge }
+volumes:
+  qdrant-data:                                         # named volume, docker-managed on WSL ext4, never lands on /mnt/c

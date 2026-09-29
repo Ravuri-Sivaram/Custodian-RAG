@@ -1,0 +1,65 @@
+# CI -- the CPU gate (docs/TESTING.md §1): touches no GPU / Qdrant server / network, finishes in ~20 seconds.
+# The other pre-production gate (GPU smoke test + eval/acl_regression.py's end-to-end zero-leak
+# check) needs a real 4090 and a real index, so it doesn't run in CI -- it stays a manual gate.
+# See docs/TESTING.md §3.
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+# Read-only token: this workflow never writes back to the repo and never publishes anything.
+permissions:
+  contents: read
+
+# Cancel a stale run when a new push lands on the same branch, to avoid queuing up.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  tests:
+    # This tier runs exactly the command the README / tests/README promise contributors.
+    # It must stay green in an environment with **only [dev] installed** -- it once wasn't (five
+    # tests did a bare `import torch` while [dev] only pulls in pytest); that's now fixed with
+    # pytest.importorskip, and this job exists to catch a regression of that.
+    name: pytest (py${{ matrix.python-version }}, [dev] only)
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        # Matches pyproject's requires-python = ">=3.10"; one test at each end of the range.
+        # 3.10 was verified to actually resolve (numpy falls back to 2.2.6) and pass cleanly --
+        # this isn't just copied from the declared floor.
+        python-version: ["3.10", "3.12"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: pip
+      - run: python -m pip install --upgrade pip
+      - run: pip install -e '.[dev]'
+      - run: pytest -q
+
+  tests-with-cpu-torch:
+    # Five assertions compare torch's and numpy's truncation/normalization math for equivalence --
+    # they guard the data-correctness invariant that "building the index locally and querying it
+    # remotely must never disagree" (see tests/engine/test_remote.py).
+    # Without torch present, these honestly skip; here CPU torch is installed separately so they
+    # actually run, rather than adding torch's 200MB to [dev] and slowing down every contributor's
+    # install.
+    name: pytest (py3.12, + CPU torch)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - run: python -m pip install --upgrade pip
+      - run: pip install -e '.[dev,table]'
+      # A CPU-only wheel index, so it doesn't pull in CUDA (about 200MB vs. 2GB+)
+      - run: pip install torch --index-url https://download.pytorch.org/whl/cpu
+      - run: pytest -q

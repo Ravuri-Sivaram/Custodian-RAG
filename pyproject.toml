@@ -1,0 +1,42 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "custodian"
+version = "0.3.0"
+description = "Custodian: a self-contained, multi-format agentic RAG system -- parse -> chunk -> hybrid retrieval -> generate, with an HTTP closed-pipeline Q&A exit plus an MCP exit"
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "MIT" }
+# Core = the minimal set needed to run the closed pipeline (once the three engine packages were
+# folded in, their runtime dependencies were merged in here).
+# GPU dense/rerank go through the [gpu] extra; parsing/tables/office each have their own extra --
+# see requirements-gpu.txt for the pinned GPU stack.
+dependencies = [
+    "fastapi>=0.110",       # HTTP service
+    "uvicorn>=0.29",
+    "httpx>=0.27",          # MCP adapter -> daemon
+    "mcp>=2,<3",            # MCP exit; needs the 2.x API (MCPServer), which 1.x doesn't have
+    "openai>=1.30",         # generator's OpenAI-compatible LLM client (DeepSeek)
+    "qdrant-client>=1.12",  # embedder's vector store (named dense+sparse, RRF, Modifier.IDF)
+    "numpy",
+]
+
+[project.optional-dependencies]
+# dense (Qwen3-VL-Embedding-8B) + reranker: heavy GPU dependencies; developed against a WSL custodian
+# environment (torch cu128).
+gpu = ["transformers>=4.57.0", "qwen-vl-utils>=0.0.14", "torch>=2.8.0", "accelerate", "scipy", "einops"]  # scipy/einops: transitive deps pulled in by model loading that the pytorch base install doesn't bring along on its own (this was masked on a bare-metal custodian box before; confirmed and filled in with a real container test)
+# Parse orchestration (the MinerU client + chunker.meta page-number metadata; see scripts/README)
+parse = ["pypdf", "requests", "python-dotenv"]
+# Table chunking (xlsx)
+table = ["openpyxl", "xlrd"]
+# Legacy fallback adapters (the primary office path is MinerU; docx/pptx adapters are a deprecated fallback)
+docx = ["python-docx", "python-pptx"]
+dev = ["pytest>=8", "ruff>=0.7"]
+
+[project.scripts]
+custodian = "custodian.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]

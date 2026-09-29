@@ -1,0 +1,41 @@
+# Slim down the docker build context: only pyproject/README/src (+ scripts for migrate) are needed. Excludes large files/secrets/private artifacts.
+.git
+.gitignore
+**/__pycache__
+*.pyc
+*.pyo
+.pytest_cache
+*.egg-info
+build/
+dist/
+
+# Tests/eval/docs don't go into the image (pip install . only installs src/, these just slow down context transfer)
+tests/
+eval/
+docs/
+
+# Secrets and local config (never go into the image)
+.env
+.env.compose
+.env.compose.example
+*.keys.json
+.mcp.json
+custodian_logs/
+
+# Large regeneratable data (parse output/corpus/chunks; all kept outside the repo or gitignored)
+corpus/
+corpus_multiformat/
+parsed/
+parsed_office/
+parsed_scanned/
+chunks/
+chunks_proto/
+chunks_realtok/
+unlimited-ocr-out/
+_xlsx_redteam/
+*.local/
+
+# The container build artifacts themselves
+Dockerfile.*
+docker-compose.yml
+deploy/                 # nginx.conf etc. are injected via bind mount, not part of the image build context

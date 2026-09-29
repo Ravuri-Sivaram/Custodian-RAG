@@ -1,0 +1,22 @@
+# The vLLM adapter image (Plan B/A, docs/VLLM_PLAN.md Phase 1). Slim, no GPU, no torch -- it only
+# translates custodian's /embed contract into vLLM's /v1/embeddings (via a chat template), and
+# forwards the actual work to the inference-vllm-engine container (vllm serve).
+# All GPU work lives in the engine container (vllm/vllm-openai); this adapter only needs
+# fastapi/uvicorn/httpx/transformers (to load the tokenizer for the chat template).
+FROM python:3.12-slim
+ENV PYTHONUNBUFFERED=1 PIP_NO_CACHE_DIR=1
+WORKDIR /app
+ARG PIP_INDEX_URL=https://pypi.tuna.tsinghua.edu.cn/simple
+RUN apt-get update && apt-get install -y --no-install-recommends curl \
+    && rm -rf /var/lib/apt/lists/*
+# The adapter has zero custodian/torch/qdrant dependencies: only fastapi/uvicorn/httpx/transformers
+# (the tokenizer applies the chat template, CPU-only).
+RUN pip install -i ${PIP_INDEX_URL} "fastapi>=0.110" "uvicorn>=0.29" "httpx>=0.27" "transformers>=4.57.0"
+COPY src/inference_vllm_adapter.py ./inference_vllm_adapter.py
+# Build-time "no torch" assertion (the same discipline as the slim custodian image: the adapter
+# shouldn't pull in torch either)
+RUN python -c "import importlib.util,sys; sys.exit('FATAL torch leaked' if importlib.util.find_spec('torch') else 0)"
+EXPOSE 8900
+# Only the tokenizer is needed from the model (for the chat template); compose mounts
+# /root/models read-only externally (the same volume as inference)
+CMD ["python", "inference_vllm_adapter.py"]

@@ -1,0 +1,18 @@
+# Custodian GPU stack (dense embedder + reranker) -- equivalent to pyproject's [gpu] extra, but pins
+# the exact versions verified on the development machine.
+# Actual development environment: WSL Ubuntu conda env `custodian`, GPU=RTX 4090 (pinned by name),
+# torch 2.8.0+cu128.
+# The models (Qwen3-VL-Embedding-8B / reranker) are downloaded via modelscope into ~/models; their
+# official scripts/ directory comes down with the download -- dense.py/rerank.py load it at runtime
+# via sys.path.insert. That directory is not part of this repo's code; do not delete it (see the
+# docs invariants).
+#
+# Install (inside the custodian env): pip install -r requirements-gpu.txt
+# Or via the extra: pip install -e '.[gpu]'
+
+torch>=2.8.0          # Must be the CUDA build (cu128); install via conda or the official index
+transformers>=4.57.0
+qwen-vl-utils>=0.0.14
+accelerate
+scipy                 # transitive dependency pulled in by transformers when loading Qwen3-VL
+einops                # rearrange; not bundled with the pytorch base image

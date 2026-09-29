@@ -1,0 +1,40 @@
+# The custodian application image (Phase E, docs/SCALE_OUT.md §5-E): slim, NO torch installed,
+# stateless (apart from the shared sidecar volume), can run xN.
+# "No torch" is the go/no-go bar: the core dependencies (pyproject.toml) don't include torch, and
+# the [gpu] extra is kept fully separate.
+# The remote backend (when inference_url is non-empty) overrides _load into a no-op, so torch is
+# never triggered -- the application layer genuinely has no GPU dependency.
+FROM python:3.12-slim
+ENV PYTHONUNBUFFERED=1 PIP_NO_CACHE_DIR=1
+WORKDIR /app
+# pip index mirror (per the Phase F review): matches Dockerfile.inference, defaulting to the
+# Tsinghua mirror -- in this project's documented network environment (direct pypi.org access
+# measured at ~70-368KB/s, with EOF errors), a bare `pip install` isn't reliable. Compose build
+# args or --build-arg can override this back to the official index
+# (PIP_INDEX_URL=https://pypi.org/simple).
+ARG PIP_INDEX_URL=https://pypi.tuna.tsinghua.edu.cn/simple
+RUN apt-get update && apt-get install -y --no-install-recommends curl \
+    && rm -rf /var/lib/apt/lists/*
+
+COPY pyproject.toml README.md ./
+COPY src ./src
+RUN pip install -i ${PIP_INDEX_URL} .   # <- note: no .[gpu] -- this line IS the "no torch" guarantee (via the mirror, for a reliable build)
+
+# Build-time "no torch" assertion: catches "torch leaked into the slim image" at build time
+# instead of at runtime (a bad install fails the build immediately).
+RUN python -c "import importlib.util, sys; \
+    sys.exit('FATAL: torch leaked into slim image' if importlib.util.find_spec('torch') else 0)"
+# Build-time closure assertion: the full import chain, plus constructing the remote backend, must
+# not pull in torch (this follows up on finding I2 from SCALE_OUT's Phase C).
+RUN python -c "import custodian.engine, custodian.service, sys; \
+    from embedder.remote import RemoteDense, RemoteReranker; \
+    from embedder.config import EmbedConfig; \
+    RemoteDense(EmbedConfig(inference_url='http://x:8900')); \
+    RemoteReranker(EmbedConfig(inference_url='http://x:8900')); \
+    assert 'torch' not in sys.modules, 'torch imported at closure'; print('slim closure OK')"
+
+EXPOSE 8787
+# Uses the `custodian` console command installed via [project.scripts] (equivalent to
+# `python -m custodian serve` -- src/custodian/__main__.py is also present -- but the console
+# script is more reliable, since it doesn't depend on CWD/PYTHONPATH).
+CMD ["custodian", "serve"]

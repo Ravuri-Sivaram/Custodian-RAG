@@ -1,0 +1,45 @@
+# Secrets and local config (never commit)
+.env
+.env.compose
+
+# Python
+__pycache__/
+*.pyc
+*.egg-info/
+dist/
+build/
+.pytest_cache/
+
+# Local index / temporary artifacts
+*.local/
+
+# Team edition: key files and request logs (never check in)
+*.keys.json
+custodian_logs/
+
+# MCP local config (contains WSL absolute paths/usernames; use .mcp.json.example as a placeholder)
+.mcp.json
+
+# eval private artifacts and baselines (contain research-report excerpts, never check in; all regeneratable)
+eval/gold*.jsonl
+eval/baseline_*.json
+eval/results_*.json
+eval/verdicts.json
+eval/system_outputs.jsonl
+eval/*.log
+eval/_units/
+eval/_judge/
+eval/*_units*
+eval/*_judge*
+
+# Large regeneratable data (parse output/corpus/chunks; kept outside the repo, config points to it)
+corpus/
+corpus_multiformat/
+parsed/
+parsed_office/
+parsed_scanned/
+chunks/
+chunks_proto/
+chunks_realtok/
+unlimited-ocr-out/
+_xlsx_redteam/

@@ -1,0 +1,31 @@
+# The GPU inference service image (Phase E, docs/SCALE_OUT.md §5-E).
+# Based on the official pytorch image: torch 2.8.0+cu128 comes preinstalled, matching the
+# development machine's version (keeps local/remote equivalence stable).
+# Key point: this avoids downloading torch's ~5GB from download.pytorch.org inside the build --
+# measured at only ~368KB/s through the local proxy (would take hours); the base image itself
+# pulls through a daocloud mirror instead (~2-3GB, done in minutes). The large models still don't
+# go into the image -- they're mounted externally at /root/models via compose.
+FROM pytorch/pytorch:2.8.0-cuda12.8-cudnn9-runtime
+ENV PYTHONUNBUFFERED=1 PIP_NO_CACHE_DIR=1
+WORKDIR /app
+ARG PIP_INDEX_URL=https://pypi.tuna.tsinghua.edu.cn/simple   # kept consistent with Dockerfile.custodian (per the Phase F review); override with --build-arg
+RUN apt-get update && apt-get install -y --no-install-recommends curl \
+    && rm -rf /var/lib/apt/lists/*
+
+# Code + the [gpu] extra. torch>=2.8.0 is already satisfied by the base image, so it's not
+# reinstalled -- only transformers/qwen-vl-utils/accelerate + the core dependencies are pulled
+# (all MB-scale, reliable over the PyPI mirror).
+COPY pyproject.toml README.md ./
+COPY src ./src
+RUN pip install -i ${PIP_INDEX_URL} ".[gpu]"
+
+# EmbedConfig hard-codes ~/models and doesn't read it from an env var ($HOME=/root in the
+# container) -- compose mounts /root/models directly. This symlink is a fallback to keep it
+# consistent with the docs.
+RUN mkdir -p /root && ln -sf /root/models /models 2>/dev/null || true
+
+EXPOSE 8900
+# The model's scripts/ directory comes down alongside the model download, at
+# /root/models/*/scripts; dense.py loads it at runtime via sys.path.insert (it lives on the
+# mounted volume, not baked into the image).
+CMD ["python", "-m", "embedder.inference_server"]
