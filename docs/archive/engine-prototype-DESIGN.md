@@ -4,8 +4,8 @@
 > to `../analysis/CHUNKING_STRATEGY.md` and `EVALUATION.md`, it refers to the old repo's layout (not carried over during migration, so demoted to plain text to avoid pointing at a 404). The current version lives at
 > [docs/components/chunker/](../components/chunker/) and [CHUNKING_EVALUATION.md](../methodology/CHUNKING_EVALUATION.md).*
 
-> **Note (this fork):** §7's "Chinese /1.7" token-estimation figure describes the original prototype's Chinese-language
-> support, before this fork replaced it with Telugu (see the top-level README). Kept as historical record, not re-measured
+> **Note (this project):** §7's "prior-language /1.7" token-estimation figure describes the original prototype's support
+> for the project's original non-English language, before this project replaced it with Telugu (see the top-level README). Kept as historical record, not re-measured
 > for Telugu.
 
 > Purpose: turn the PDF → retrievable-chunk process into an engineering system that is **reusable, auditable, and tunable**.
@@ -122,7 +122,7 @@ This is the **only place in the whole system with real tradeoffs**, deliberately
 - **merge_prev alignment**: the original bbox-IoU approach had **zero hits throughout**, because content_list (rendered coordinates) and layout (PDF points) use different coordinate systems (adversarial review F1); switched to **text-prefix matching** (after the fix, 112 chunks across 17 documents hit). Blocks with no text at all may still be missed.
 - **Provenance degrades on long-block splitting**: when a single block over `max` is split into multiple pieces by `_sentence_split`, each piece's `source_indices` reuses the same original block index, so it can only be traced back to the original block, not distinguish between pieces (review finding F5). Character-range annotations would be needed for piece-level provenance.
 - **Deep legal clauses** are only kept together via "blocks merged upward," without explicitly building an `(a)(1)(A)` tree; precise retrieval by clause would require a second-level parse of inline enumeration markers.
-- **Tokens are estimated by character count** (English /4, Chinese /1.7), not a real tokenizer. Adequate for monitoring; billing scenarios would need a real tokenizer.
+- **Tokens are estimated by character count** (English /4, prior non-English language /1.7), not a real tokenizer. Adequate for monitoring; billing scenarios would need a real tokenizer.
 - **VLM-derived chart/image content values are not trustworthy** (already flagged `vlm_content`), but are not automatically verified; downstream should not index them as fact.
 - **The news category is multiple concatenated documents**: currently handled as an ordinary document (1399 chunks); ideally it should be split at document boundaries first.
 

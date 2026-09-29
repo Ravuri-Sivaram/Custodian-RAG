@@ -50,10 +50,10 @@ def _is_format_heading(para):
     txt = (para.text or "").strip()
     if not txt:
         return False
-    # No no-spaces special case is needed here: unlike Chinese (which this used to special-case,
-    # since a whole CJK sentence has no inter-word spaces and so looks like a single "token" to
-    # .split()), Telugu is written with spaces between words just like English, so the plain
-    # word-count check below already works for it.
+    # No no-spaces special case is needed here: this used to special-case scripts with no
+    # inter-word spaces (where a whole sentence looks like a single "token" to .split()), but
+    # Telugu is written with spaces between words just like English, so the plain word-count
+    # check below already works for it.
     toks = txt.split()
     if len(toks) > 14:
         return False

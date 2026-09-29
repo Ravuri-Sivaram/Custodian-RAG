@@ -196,7 +196,7 @@ Interview weight, on three tiers: **★★★** = must-know / highest-frequency 
 | Item | Number | Basis |
 |---|---|---|
 | Production library `~/rag_real` | ≈ **77 documents / 7,652 chunks** | 14 categories of real documents |
-| Evaluation library evalbig | ≈ 15 documents / 1,409 chunks | 5 English papers + 4 English earnings reports + 6 Chinese research reports (historical, pre-fork corpus — see the top-level README on this fork's Chinese→Telugu swap) |
+| Evaluation library evalbig | ≈ 15 documents / 1,409 chunks | 5 English papers + 4 English earnings reports + 6 research reports in the project's original non-English language (historical, earlier corpus — see the top-level README on this project's original-language→Telugu swap) |
 | pytest suite | **179 passed** (a historical basis, as OVERVIEW recorded it at the time; see [TESTING §1](../TESTING.md) for the current count) | A different point in time and basis: the pre-writing adversarial review's full-repo `pytest tests -q` baseline was **224/4skip** → **259 passed/5skip** (36 new test cases); spinning up a real Qdrant server gave **264/0skip** — not the same point in time/statistical basis as 179, **do not add them together** |
 | Multi-replica throughput ceiling | ~**3.2 req/s** | = serialized single-card GPU forward passes; `--scale` doesn't change it |
 | vLLM equivalence probe | cosine **0.99956**; 88-question top-k **87/88** agreement | A go/no-go gate, with the criterion set at the level of business impact |

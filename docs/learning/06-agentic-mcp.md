@@ -401,7 +401,7 @@ single supplementary retrieval (smart-ask), whose trigger condition is designed 
 
 **Q9: The industry is betting heavily on agentic retrieval (deep research is everywhere) — isn't your net-negative conclusion swimming against the current?**
 Key point: separate "direction" from "workload." The direction is real — the TREC RAG track's 2026 edition has already gone agent-first,
-and the BrowseComp family (including a Chinese version, ZH, and a fixed-corpus Plus) of agentic retrieval benchmarks has come out densely in 2025-26
+and the BrowseComp family (including a ZH variant and a fixed-corpus Plus) of agentic retrieval benchmarks has come out densely in 2025-26
 (as of 2026-07); but what they test is "open-web / large-corpus information that's hard to locate in multiple steps," while this project's workload is a
 single library, mostly single-hop, table-dense — the paired measurement on **this distribution** found orchestration nets negative (Δ about −0.1, direction
 stable, magnitude carrying eval#0's assembly bias, pending re-evaluation, see §3.3). So what's being contradicted isn't the trend, it's "defaulting to an agent
@@ -480,7 +480,7 @@ Known weaknesses worth stating **proactively** in an interview:
    missing two production fixes (eval#0, confirmed and unfixed). When I cite this conclusion I only cite the direction, not the magnitude as a fixed
    number; the fix and re-run are already on the plan, and they have to be bundled together as one change (code + re-evaluation + updated published numbers).
 2. **The cross-document conclusion rests on n=5**: decompose's weak edge on cross-doc (0.20 vs. 0) has too small a sample to count as evidence, only a
-   signal (the exam itself also has coverage skew — table questions fill the cap in doc_id alphabetical order, with Chinese-language research reports getting only 1/16, confirmed and deferred — a historical finding from the pre-fork Chinese-language gold set, kept as record and not re-measured for Telugu).
+   signal (the exam itself also has coverage skew — table questions fill the cap in doc_id alphabetical order, with the non-English-language research reports getting only 1/16, confirmed and deferred — a historical finding from the earlier non-English gold set, kept as record and not re-measured for Telugu).
 3. **_INSTRUCTIONS is a hint, not enforcement**: the contract text constrains agent behavior (when to stop, not executing injected instructions) but
    relies on the agent obeying it; the real, mandatory boundary is only ACL hard filtering and server-side identity. A non-compliant agent could retry
    pointlessly and burn GPU — the tool surface has doc_ids caps and top_k validation, but no per-agent rate limiting.

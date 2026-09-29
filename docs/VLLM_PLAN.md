@@ -1,7 +1,7 @@
 # vLLM Inference Backend Plan (Plan B → promote to Plan A once it clears the gates)
 
-> **Note (this fork):** §4's G1 vector-equivalence sample (Chinese/English texts) predates this fork's swap of
-> Chinese-language support for Telugu. The measured cosine numbers are kept as historical record and have not been
+> **Note (this project):** §4's G1 vector-equivalence sample (texts in the project's original non-English language and English) predates this project's swap of
+> that original-language support for Telugu. The measured cosine numbers are kept as historical record and have not been
 > re-measured against Telugu text.
 
 > Positioning: **not a replacement — coexistence first**. The existing self-contained FastAPI inference service
@@ -115,7 +115,7 @@ gates (equivalence); G4 is the **payoff** gate (throughput):
 | Gate | Criterion | How it's tested | Consequence of failure |
 |---|---|---|---|
 | **G0 feasibility** | vLLM loads Qwen3-VL-Embedding-8B in pooling mode, and `/v1/embeddings` produces 4096-dimensional vectors | Start the service with `vllm serve ... --runner pooling` (or `LLM(runner="pooling")`), curl one piece of text | This path is dead on arrival and the plan is void (fall back to FastAPI) |
-| **G1 vector equivalence** ⭐ | For the same batch of texts (Chinese/English, long/short, with instruction), `cosine(vLLM, official Qwen3VLEmbedder) > 0.9999`, and norm ≈ 1 | `scripts/vllm_equiv_probe.py` (see §7): custodian produces and archives the official vectors → stop it → vLLM produces vectors → compare cosine (time-sliced to avoid OOM) | The existing library (built officially) **cannot be queried by vLLM** (vector drift → top-k misalignment, silent data corruption). Two ways out: ① precisely align the input format/transformers version and re-test; ② accept that vLLM can only be used after a **full rebuild of the library using vLLM** (a major migration) |
+| **G1 vector equivalence** ⭐ | For the same batch of texts (original non-English language/English, long/short, with instruction), `cosine(vLLM, official Qwen3VLEmbedder) > 0.9999`, and norm ≈ 1 | `scripts/vllm_equiv_probe.py` (see §7): custodian produces and archives the official vectors → stop it → vLLM produces vectors → compare cosine (time-sliced to avoid OOM) | The existing library (built officially) **cannot be queried by vLLM** (vector drift → top-k misalignment, silent data corruption). Two ways out: ① precisely align the input format/transformers version and re-test; ② accept that vLLM can only be used after a **full rebuild of the library using vLLM** (a major migration) |
 | **G2 mixed build/query** ⭐ | On the real library built officially, with vLLM encoding the queries, the top-k `chunk_id` ordering for ~50 real queries **exactly matches** the official-query ordering | Start the vLLM adapter pointed at the real library, diff its top-k against official encoding (same method as Phase B's E2) | Element-wise equivalence **does not imply** an unchanged top-k (HNSW approximation + RRF rank amplify tiny differences). If this fails, **it does not go to production** (same ironclad rule as E2) |
 | **G3 reranker** (optional) | vLLM's score for Qwen3-VL-Reranker is `allclose` with the official score | Only done if reached in Phase 2; skipped in Phase 1 (reranker stays on torch) | If it fails, **the reranker is simply not migrated** — only embed is migrated (rerank is safe to degrade, no loss) |
 | **G4 throughput** (the "does it actually pay off" criterion) | At concurrency C∈{16,32,64}, vLLM's QPS / p50 / p95 are **significantly better** than FastAPI's (serial gpu_lock); single-request latency does not regress | `scripts/bench.py` sweeps concurrency levels, hitting FastAPI and the vLLM adapter with the same batch of queries | If vLLM isn't faster than serial execution (it may even be worse at low concurrency) → **do not promote to Plan A**; keep it as Plan B for later scale-out; record honestly |
@@ -129,7 +129,7 @@ gates (equivalence); G4 is the **payoff** gate (throughput):
 | Gate | Result | Data |
 |---|---|---|
 | **G0 feasibility** | ✅ **GO** | vLLM 0.22.1 `LLM(runner="pooling", max_model_len=8192)` successfully loaded Qwen3-VL-Embedding-8B; `llm.embed()` produced **4096-dimensional, normalized (norm=1.00000)** vectors. **The architecture fully supports this** |
-| **G1 vector equivalence** | ⚠ **Borderline** | Across 8 samples (Chinese/English, long/short), cosine ranged **[0.99956, 0.99982]**, min **0.99956** / mean **0.99973**. Direction is highly consistent (worst case about a 1.7° angle), but it **does not reach the strict >0.9999 bar** |
+| **G1 vector equivalence** | ⚠ **Borderline** | Across 8 samples (original non-English language/English, long/short), cosine ranged **[0.99956, 0.99982]**, min **0.99956** / mean **0.99973**. Direction is highly consistent (worst case about a 1.7° angle), but it **does not reach the strict >0.9999 bar** |
 
 **Root cause of the drift (diagnosis, not conclusive)**: the prime suspect is the **transformers version
 difference** — the library was built with custodian's **4.57.6**, while the vLLM environment runs **5.10.2**, and

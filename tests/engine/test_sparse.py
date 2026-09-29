@@ -1,6 +1,7 @@
 """BM25 sparse unit tests (pure CPU). Focus: verifying exact strings are preserved -- the whole
 reason for choosing BM25 in the first place."""
 
+import unicodedata
 
 from embedder.sparse import _tok_id, doc_sparse, query_sparse, tokenize
 
@@ -38,6 +39,20 @@ def test_telugu_word_extracted_as_one_token():
     q = query_sparse("ఆదాయం")
     assert d is not None and q is not None
     assert set(q.indices) & set(d.indices), "a Telugu token doesn't line up between doc/query"
+
+
+def test_nfc_normalization_collapses_equivalent_telugu_encodings():
+    # The same visible Telugu text can be encoded as different (but canonically-equivalent) Unicode
+    # codepoint sequences. Concretely: the vowel sign AI (U+0C48, "ై") has a canonical decomposition
+    # to vowel sign E + the AI length mark (U+0C46 U+0C56) -- text containing it can arrive either
+    # precomposed or decomposed depending on the source tool, and without normalization these two
+    # byte-for-byte-different encodings of the identical visible word would hash to different tokens
+    # and silently fail to match between doc and query. tokenize() applies
+    # unicodedata.normalize("NFC", ...) up front specifically to prevent this.
+    raw = "నైనం"                              # contains the precomposed vowel sign AI (U+0C48)
+    decomposed = unicodedata.normalize("NFD", raw)   # same visible word, decomposed encoding
+    assert raw != decomposed, "test fixture isn't actually exercising a decomposed variant"
+    assert tokenize(raw) == tokenize(decomposed)
 
 
 def test_no_double_count_tf():

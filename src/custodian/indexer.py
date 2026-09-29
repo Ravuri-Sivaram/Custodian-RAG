@@ -25,7 +25,8 @@ from . import config
 def detect_lang(elements) -> str:
     """Detect language from the proportion of Telugu-script characters in the content (more
     reliable than guessing from doc_type; carried over from the engine's index_real.py, which
-    originally did this for CJK before Chinese support was replaced with Telugu)."""
+    originally used a similar script-ratio check for the non-English language this project
+    supported before it was replaced with Telugu)."""
     sample = "".join((e.text or "") for e in elements[:40])[:2000]
     if not sample:
         return "en"

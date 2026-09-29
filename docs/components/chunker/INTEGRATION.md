@@ -127,7 +127,7 @@ def from_yourparser(parsed) -> list[Element]:
 - **doc_type routing (recommended)**: for numbered types (academic/standards documents), a per-type budget is enough; for **unnumbered types, set expectations to "generic parent-child"** and don't expect precise hierarchy. `doc_type` doesn't need to be passed for it to run (it falls back to the default budget + `text_level`).
 - **lang**: affects token estimation — pass `"te"` for Telugu (a conservative char/token divisor, since Telugu is an
   abugida script and hasn't been empirically calibrated yet, see `est_tokens`); anything else (including `"en"`) uses
-  the English divisor. (This fork replaced the original `"ch"`/`"en"` Chinese/English split with `"te"`/English.)
+  the English divisor. (This project replaced the original `"ch"`/`"en"` original-language/English split with `"te"`/English.)
 - **One chunk per page**: `Chunker(page_grouped={"slides_tutorial","my_slide_type"})`.
 
 ## 4. Relationship to the prototype harness

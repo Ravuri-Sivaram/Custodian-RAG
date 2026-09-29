@@ -53,7 +53,7 @@ But docx has a signal MinerU doesn't: **direct character formatting**. Quantifie
 | sections | 472 | **674** |
 | content orphans | 0 | **0** |
 
-Examples of flat→structured: bylaws 0→22, legal_berkeley 0→23, lugov 0→29, Portuguese ecdc 0→22. Documents that **remained flat** (mit_esp pure prose / cngov Chinese form [part of the pre-fork Chinese-language corpus, kept as historical record — see this fork's Telugu swap in the top-level README] / CV / financial statement) are ones with **genuinely no heading structure** — inference did not force anything, correctly.
+Examples of flat→structured: bylaws 0→22, legal_berkeley 0→23, lugov 0→29, Portuguese ecdc 0→22. Documents that **remained flat** (mit_esp pure prose / cngov form in the project's original non-English language [part of the earlier original-language corpus, kept as historical record — see this project's Telugu swap in the top-level README] / CV / financial statement) are ones with **genuinely no heading structure** — inference did not force anything, correctly.
 
 ## 3. pptx adapter (`chunker/src/chunker/adapters/pptx.py`)
 
@@ -92,7 +92,7 @@ Examples of flat→structured: bylaws 0→22, legal_berkeley 0→23, lugov 0→2
 | pptx chunks/slides | 2.04 (including 1617 junk) | **1.23** (captionless cleaned up) |
 | asset orphans (captionless images, expected drop) | — | docx 115 / pptx 1926 (no retrievable text) |
 
-The flagged cases were individually re-verified: docx tamucc "Cultural Relativism" ✅, harvard instructor email ✅. The remaining <97% of docx word coverage is almost entirely **CJK files** — character-level verification showed this is **measurement noise** (Word splits CJK phrases into multiple w:t runs, so tokens don't line up; cngov's character coverage is **100%**, jpgov **99%**), not real loss. The part of the "zero changes to `core.py`" claim that still holds: reset-aware/banner/aside_text logic was unaffected; what changed was `_asset_chunk` (general-purpose, benefits PDF too) and single-page windowing in `retrieve`. All 12 unit tests pass.
+The flagged cases were individually re-verified: docx tamucc "Cultural Relativism" ✅, harvard instructor email ✅. The remaining <97% of docx word coverage is almost entirely **files in scripts without inter-word spaces** — character-level verification showed this is **measurement noise** (Word splits such phrases into multiple w:t runs, so tokens don't line up; cngov's character coverage is **100%**, jpgov **99%**), not real loss. The part of the "zero changes to `core.py`" claim that still holds: reset-aware/banner/aside_text logic was unaffected; what changed was `_asset_chunk` (general-purpose, benefits PDF too) and single-page windowing in `retrieve`. All 12 unit tests pass.
 
 **Genuine gaps that remain (documented honestly, round-2 candidates, all confirmed non-blocking)**:
 - docx **footnotes/endnotes** (a separate `footnotes.xml` part) are not captured — analogous to PDF's page_footnote, could be handled similarly.
@@ -111,7 +111,7 @@ The flagged cases were individually re-verified: docx tamucc "Cultural Relativis
 | **text orphans (real loss)** | **0** |
 | asset orphans (captionless scanned images) | 919 (expected, no retrievable text) |
 | heading rate | 8% of elements |
-| crashes | 0 (including RTL Arabic/Urdu, vertical CJK, Odia/Tamil) |
+| crashes | 0 (including RTL Arabic/Urdu, vertical scripts without inter-word spaces, Odia/Tamil) |
 
 **Why orphan=0 is trustworthy this time (no self-referential-metric trap like office)**: `from_mineru` is a **1:1 faithful mapping** of content_list (no pre-extraction logic that could drop content), so "Element↔chunk conservation" is equivalent to "content_list↔chunk conservation" = true conservation. OCR fidelity is MinerU's responsibility, outside the chunker's scope.
 
@@ -316,7 +316,7 @@ Before moving on to the embed component, ran a comprehensive pre-freeze adversar
 
 **Should-fix items handled at the same time**:
 - **doc_type added to the Chunk schema**: the Chunk previously had no doc_type → assemble_big always used DEFAULT_BUDGET (law/finance budget queries didn't take effect). Chunk now carries doc_type, stamped at chunk time, and assemble_big picks it up correctly (law=700 verified working). **Stabilizes the embed payload schema.**
-- **`zh` alias for lang**: est_tokens now accepts the ISO `zh*` form (it previously only recognized `ch` — passing `zh` silently fell through to the English divisor, risking a 2.35x CJK underestimate that could get truncated by Qwen3-VL).
+- **`zh` alias for lang**: est_tokens now accepts the ISO `zh*` form (it previously only recognized `ch` — passing `zh` silently fell through to the English divisor, risking a 2.35x underestimate, for scripts without inter-word spaces, that could get truncated by Qwen3-VL).
 - Documentation hygiene: API.md flags updated with `image_only`/table flags and a `doc_type` row; INTEGRATION payload updated with `lang/page_end/doc_type`; deleted the dead code `_is_title_row` (a NameError bomb referencing an undefined regex); refreshed test counts.
 
 **Accepted tradeoffs (not blocking the freeze)**: est_tokens heuristics (to be re-calibrated against BUDGETS with an official tokenizer once Qwen3-VL is wired up); promote_bare's all-or-nothing brittleness; docx/pptx fallback doesn't fill img_path; the prototype chunk_document.py continuing to exist alongside; acl_index defense-in-depth items.

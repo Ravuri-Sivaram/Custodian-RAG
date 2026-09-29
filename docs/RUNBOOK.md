@@ -1,6 +1,6 @@
 # RUNBOOK —— Local Startup and Operations Quick Reference
 
-custodian runs on **WSL Ubuntu + conda env `custodian`** (already includes the GPU stack: torch cu128 / transformers / qdrant-client / mcp). (This fork's sparse tokenizer is a Telugu-Unicode-range regex in `src/embedder/sparse.py`, so there's no `jieba` dependency to install.)
+custodian runs on **WSL Ubuntu + conda env `custodian`** (already includes the GPU stack: torch cu128 / transformers / qdrant-client / mcp). (This project's sparse tokenizer is a Telugu-Unicode-range regex in `src/embedder/sparse.py`, so there's no `jieba` dependency to install.)
 The commands below all assume you have already run `conda activate custodian` and `cd`'d into the custodian repo root. For operational details, see [OPERATIONS.md](OPERATIONS.md).
 
 ## 0. One-time setup

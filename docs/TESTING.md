@@ -1,7 +1,7 @@
 # Custodian Testing Documentation
 
-> **Note (this fork):** several results below (§3's cross-language table-ranking runs) were measured against real Chinese-language
-> financial reports, from before this fork replaced Chinese-language support with Telugu (see the top-level README's Technology
+> **Note (this project):** several results below (§3's cross-language table-ranking runs) were measured against real financial reports
+> in the project's original non-English language, from before this project replaced that original-language support with Telugu (see the top-level README's Technology
 > stack table). They're kept as genuine historical findings and have not been re-measured against Telugu documents.
 
 > Two gates: CPU unit tests (run on every change; one pytest suite must be fully green, baseline counts in §1) / GPU smoke tests + ACL regression (run before going to production).
@@ -59,7 +59,7 @@ Steps and measured results (all passed):
 | 6 | Repeat retrieve in the same session (X-Custodian-Session: smoke1) | All 3 results are `already_returned`, already_n=3 |
 | 7 | New session smoke2, same query | `section_window×2 + deduped`, already_n=0 (**isolation confirmed**) |
 | 8 | MCP adapter (live daemon): list/retrieve/outline | 77 docs / retrieve ok / outline shows 88 sections |
-| 9 | CLI: `python -m custodian ask "What content does the library have on DDoS attack protection?"` | Grounded Chinese-language answer + sources (title/page/section/chunk_id) |
+| 9 | CLI: `python -m custodian ask "What content does the library have on DDoS attack protection?"` | Grounded answer in the project's original non-English language + sources (title/page/section/chunk_id) |
 
 Reproduction commands are in the git history and in [IMPLEMENTATION.md](IMPLEMENTATION.md) §6.
 
@@ -67,11 +67,11 @@ Reproduction commands are in the git history and in [IMPLEMENTATION.md](IMPLEMEN
 
 | Phrasing | Result |
 |---|---|
-| Chinese, default parameters (user's original attempt) | Honest refusal (prose crowds out the table; the number is in the table on p.16, confirmed present in the library) |
-| Chinese/English + top_k 12 + rerank (no kind) | Still refuses |
-| Chinese + `--kind table` + top_k 15 (no rerank) | ⚠ **Wrong answer**: segment revenue 4,180,339 was mistaken for total revenue (filed as TODO P2) |
+| Original non-English language, default parameters (user's original attempt) | Honest refusal (prose crowds out the table; the number is in the table on p.16, confirmed present in the library) |
+| Original non-English language/English + top_k 12 + rerank (no kind) | Still refuses |
+| Original non-English language + `--kind table` + top_k 15 (no rerank) | ⚠ **Wrong answer**: segment revenue 4,180,339 was mistaken for total revenue (filed as TODO P2) |
 | **English + `--kind table --rerank`** | ✅ **$6,779,511 thousand, citing p.16 Selected Financial Data** |
-| Chinese + `--kind table --rerank` | Honest refusal (explicitly states it only saw segment data) — cross-language table-ranking gap remains |
+| Original non-English language + `--kind table --rerank` | Honest refusal (explicitly states it only saw segment data) — cross-language table-ranking gap remains |
 
 Conclusion: for numeric/table questions, recommend `--kind table --rerank` plus document-language keywords; cross-language enhancement is filed as TODO P2.
 
@@ -89,12 +89,12 @@ Conclusion: for numeric/table questions, recommend `--kind table --rerank` plus 
 - **Rebuild**: full rebuild of both ~/rag_real (77 documents / 7652) and ~/rag_eval_big (15 documents / 1409).
 - **Regression** (72 questions, same judge): correctness **held steady at 0.847**; citation recall +0.007; faithfulness 0.986 (−1 question, a borderline judgment on inferring an extreme value from a chart, a known hard category); retrieval recall 0.854 → 0.833 (−2.1pp).
 - **Question-by-question diagnosis of the drop**: it all came from 3 questions with double gold answers in the multi_intra category, each of which lost one **redundant** gold answer (3×0.5/72=2.1pp accounts for all of it); **all 3 questions were still answered correctly under the new index**; 0 questions went up in score — because gold answers were sampled from prose chunks, questions that benefit from tables are near-zero in the gold set (a measurement blind spot, already filed as TODO).
-- **Motivating case (decisive)**: the original Chinese phrasing + `--kind table` (no rerank) went from wrong/refused to **directly answering $6,779,511 thousand correctly** (citing the p.18 consolidated results table).
+- **Motivating case (decisive)**: the original phrasing, in the project's prior non-English language, + `--kind table` (no rerank) went from wrong/refused to **directly answering $6,779,511 thousand correctly** (citing the p.18 consolidated results table).
 - **Verdict: kept.** Judged by degree of damage: the question categories unlocked were previously wrong/refused (high damage), the displaced hits were redundant recall that didn't affect the answer (zero damage), and correctness held steady.
 
 **Adding table questions to gold + new 88-question baseline (2026-07-03, engine commit `2ccda93`)**:
 
-- gen_gold_tables.py generated 16 targeted table questions (mixed Chinese/English; programmatic QC caught and rejected 2 hallucinated questions); gold went from 72 → 88, **a break in comparability** (the historical 72-question aggregate numbers can no longer be directly compared).
+- gen_gold_tables.py generated 16 targeted table questions (mixed original non-English language/English; programmatic QC caught and rejected 2 hallucinated questions); gold went from 72 → 88, **a break in comparability** (the historical 72-question aggregate numbers can no longer be directly compared).
 - **New authoritative baseline** (88 questions, DeepSeek judge, closed-pipeline default parameters): retrieval recall 0.818 / MRR 0.627 / citation recall 0.767 / faithfulness 0.977 / correctness 0.818.
 - **Split**: prose, 72 questions (retrieval 0.833 / correctness 0.861 / faithfulness 0.972) vs. **table, 16 questions (retrieval 0.750 / correctness 0.625 / faithfulness 1.000)** — table questions get 75% retrieval hit rate even without a kind filter (before the enhancement this category was nearly unreachable, and there's no "before" number since the old index has already been rebuilt over — left honestly blank); the perfect faithfulness score comes from the 4 questions with a retrieval miss all honestly refusing, with zero fabrication (the numeric-range constraint holds up on this new question category).
 - **The 6 errors on table questions**: 4 are retrieval misses (refusal judged wrong — retrieval-side headroom); 2 are cases where retrieval succeeded but the table reading was wrong (misaligned rows/columns in a large table — generation-side headroom). This is the symmetric yardstick for the next round of table-oriented work.
@@ -109,7 +109,7 @@ Conclusion: for numeric/table questions, recommend `--kind table --rerank` plus 
 | ③ Failure-driven, top_n=50, unconditional adoption | 0.625 | 0.833 | **0.932** ❌ | Rejected: partial answers carried the wrong "X was not provided" claim of missing information (X was actually in the context) |
 | ④ **Failure-driven + select-the-better-answer (final version)** | 0.688 | 0.833 | **0.977** | **Adopted** |
 
-Attribution for the final version (rows tagged retried/retry_kept): among the 81 questions that never triggered the leg, only 2 flipped compared to the baseline when paired (both are known-unstable questions that flip-flopped across all five rounds of experiments = noise floor of ±2 questions); of the 4 questions on the path that ended up not being adopted, correctness exactly matches the baseline (zero loss); of the 3 questions on the path that was adopted, 1 flipped from ✗ to ✓. **The flagship hand-crafted case (a multi-value, multi-year question type not covered by the exam) went from a refusal to fully correct under default parameters**: the Chinese "net profit by year" question got all five years right (auto=table_leg_retry), and the Chinese "total revenue" question was also answered correctly.
+Attribution for the final version (rows tagged retried/retry_kept): among the 81 questions that never triggered the leg, only 2 flipped compared to the baseline when paired (both are known-unstable questions that flip-flopped across all five rounds of experiments = noise floor of ±2 questions); of the 4 questions on the path that ended up not being adopted, correctness exactly matches the baseline (zero loss); of the 3 questions on the path that was adopted, 1 flipped from ✗ to ✓. **The flagship hand-crafted case (a multi-value, multi-year question type not covered by the exam) went from a refusal to fully correct under default parameters**: the "net profit by year" question, phrased in the project's prior non-English language, got all five years right (auto=table_leg_retry), and the "total revenue" question phrased the same way was also answered correctly.
 
 Methodological takeaways: ① intelligence built into default behavior must only act on the failure path — any "help" on the success path is a risk (the lesson of ①); ② the reranking pool depth must be ≥ the worst coarse rank of the correct chunk (the lesson of ②); ③ when a retry turns "total refusal" into "partial answer," an incorrect claim about the missing part is a new failure surface, and the selection threshold must catch it (the lesson of ③); ④ single-pass LLM eval has a noise floor of ±2 questions, so comparisons at this granularity must be attributed pairwise (the retried tag is now built into run_eval).
 

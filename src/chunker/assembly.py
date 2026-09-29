@@ -61,10 +61,11 @@ def _cap(txt, lang, max_tokens):
         tok += t
     out = "\n".join(kept)
     if est_tokens(out, lang) > max_tokens:                 # a single oversized paragraph can't be trimmed by line -> hard character cut
-        # Word-boundary-safe truncation applies regardless of language here: unlike Chinese (no
-        # inter-word spaces, so a raw character cut was the only option), Telugu IS written with
-        # spaces between words, same as English -- so the char-budget just needs to match
-        # est_tokens' divisor, and the actual cut always backs off to the last space.
+        # Word-boundary-safe truncation applies regardless of language here: this used to
+        # special-case scripts with no inter-word spaces (where a raw character cut was the only
+        # option), but Telugu IS written with spaces between words, same as English -- so the
+        # char-budget just needs to match est_tokens' divisor, and the actual cut always backs
+        # off to the last space.
         is_te = (lang or "").lower().startswith("te")
         cap_char = int(max_tokens * (1.0 if is_te else 4.0))
         out = out[:cap_char].rsplit(" ", 1)[0] or out[:cap_char]

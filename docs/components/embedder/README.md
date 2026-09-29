@@ -9,8 +9,8 @@ The **embed + hybrid retrieval** component of the RAG pipeline (takes `chunker`'
   `scripts/qwen3_vl_embedding.py`'s `Qwen3VLEmbedder` (last-token pooling), rather than a custom implementation. MRL truncated to 1024
   (measured almost lossless). The only thing that uses the GPU, locked to the 4090 by name.
 - **sparse**: **BM25** (regex-based Telugu-script tokenization + regex to preserve exact strings like `gpt-4`/`42000000` + FNV stable hash → uint32,
-  scoring handled by Qdrant's `Modifier.IDF`). Zero models, pure CPU. *(This component previously used `jieba` for Chinese word segmentation;
-  this fork replaced Chinese-language support with Telugu, and since Telugu is written with spaces between words, a plain Unicode-range regex
+  scoring handled by Qdrant's `Modifier.IDF`). Zero models, pure CPU. *(This component previously used `jieba`, a dictionary-based word segmenter for scripts without inter-word spaces;
+  this project replaced that original-language support with Telugu, and since Telugu is written with spaces between words, a plain Unicode-range regex
   replaces the dictionary-based segmenter — see `src/embedder/sparse.py`.)*
 - **vector store**: **Qdrant** (embedded, as a starting point). Named dense+sparse, `query_points` fuses via RRF.
 - **ACL hard filtering** (the security boundary): fail-closed, tenant isolation + "allow ANY OR public." **The filter is pushed down into every

@@ -7,9 +7,9 @@ table-dense) / financial_report_en (en, earnings reports). Two languages + two s
 stress-tests both the "table numeric grounding" bottleneck and multi-hop/cross-document evaluation at the same time.
 
 NOTE: this matches directories under parsed/ by NAME PREFIX (financial_research_te__...). If your real parsed/
-corpus still has directories prefixed financial_research_zh__ from before Telugu support replaced Chinese support,
-either rename those directories or change the PLAN dict below back -- this script has no way to know what's
-actually sitting on your disk, and renaming a doc_type label here doesn't rename real files for you.
+corpus still has directories prefixed with this project's previous non-English doc_type label, either rename
+those directories or change the PLAN dict below to match -- this script has no way to know what's actually
+sitting on your disk, and renaming a doc_type label here doesn't rename real files for you.
 
 Run: conda activate custodian && python eval/index_eval_corpus.py
 """

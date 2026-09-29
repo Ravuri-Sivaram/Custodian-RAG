@@ -5,11 +5,11 @@
 > Interview weight: **extremely high**. System-design questions test knowledge; behavioral questions test whether "you actually did this and actually thought it through" — this piece is the ammunition for the latter.
 > Prerequisite reading: none required; it helps to skim [07 Evaluation Methodology](07-evaluation.md) first, since a lot of the "evidence" in this piece's stories comes from that evaluation system.
 >
-> **Note (this fork):** the stories and Lab 2 code example below that involve Chinese-language text (the CJK no-space
-> sentence-splitting bug, the reset-aware heading fix measured on a real Chinese research report, the Chinese-phrased
-> motivating case) predate this fork's replacement of Chinese-language support with Telugu (see the top-level README).
+> **Note (this project):** the stories and Lab 2 code example below that involve text in the project's original non-English language (the no-space
+> sentence-splitting bug for scripts without inter-word spaces, the reset-aware heading fix measured on a real research report in that original language, the motivating case phrased in that original language)
+> predate this project's replacement of that original-language support with Telugu (see the top-level README).
 > They're kept as genuine historical findings/record and have not been re-measured against Telugu — in particular, the
-> no-space sentence-splitting bug is CJK-specific and doesn't reproduce with Telugu, since Telugu, unlike Chinese, is
+> no-space sentence-splitting bug is specific to scripts without inter-word spaces and doesn't reproduce with Telugu, since Telugu, unlike the project's original non-English language, is
 > written with spaces between words.
 
 ---
@@ -107,7 +107,7 @@ Also included: unifying the citation regex (parsing and neutralization now share
 
 These issues were **all confirmed by adversarial verification**, with fix sketches written out, but deferred per discipline — understanding "why it isn't being fixed right now" has more teaching value than "what got fixed":
 
-- **CJK text with no spaces won't chunk down** (chunker#1): the splitting regex at [src/chunker/core.py:197](../../src/chunker/core.py#L197) requires whitespace after sentence-ending punctuation, and Chinese periods aren't followed by a space → a 3,200-character Chinese passage still produces a single 1,882-token chunk under a max=900 budget, breaking the budget contract. **Deferred reason: changing chunk boundaries = the chunk count for the same document changes = chunk ids shift = the existing index must be rebuilt + eval rerun.** A fix sketch (a dual-branch zero-width split for full-width punctuation) is already prepared, waiting for a window where the index was going to be rebuilt anyway, so it can land as one atomic change. §8's experiment two lets you reproduce this yourself.
+- **Text in scripts without inter-word spaces won't chunk down** (chunker#1): the splitting regex at [src/chunker/core.py:197](../../src/chunker/core.py#L197) requires whitespace after sentence-ending punctuation, and periods in the project's original non-English language aren't followed by a space → a 3,200-character passage in that language still produces a single 1,882-token chunk under a max=900 budget, breaking the budget contract. **Deferred reason: changing chunk boundaries = the chunk count for the same document changes = chunk ids shift = the existing index must be rebuilt + eval rerun.** A fix sketch (a dual-branch zero-width split for full-width punctuation) is already prepared, waiting for a window where the index was going to be rebuilt anyway, so it can land as one atomic change. §8's experiment two lets you reproduce this yourself.
 - **eval's agentic/decompose modes assemble context by bypassing the production Generator** (eval#0): it's missing two already-shipped fixes (feeding back table `content_raw`, and the `section_path` breadcrumb), which is systematically unfavorable to agentic — **this directly puts the magnitude of "agentic net negative Δ−0.097" in question** (the direction is still likely to hold: in the historical 72-question, all-prose era the impact was small, but under the 88-question basis it needs to be rerun). Deferred reason: fixing it changes the numbers for all three comparison paths, so eval has to be rerun and the conclusion updated together — code can't be changed without also updating the numbers. Until then, every place citing this Δ must carry this caveat.
 - **nginx's read timeout (130s) is disjointed from the client's worst-case retry chain (~361s)** (deploy#0): when the inference forward pass hangs, the client gets a 504 at 130s, but custodian's worker thread keeps retrying for the full ~361s, burning threads. Deferred reason: the fix (giving the retry a wall-clock total deadline + writing both sides' budgets as mutually referencing equations) needs a WSL compose environment to inject faults and verify — it's not something pure code changes can verify.
 - **The table gold's QC gate only guards against "fabricated numbers," not "mismatched numbers"** (eval#2): at the small sample size of 16 questions, 1-2 wrong gold answers is already a 6-12 percentage-point swing. Deferred reason: it only affects future gold regeneration, and regenerating would break the basis again — **auditing the existing gold takes priority over regenerating it**.
@@ -149,7 +149,7 @@ Of 35 suspected issues, 1 was cleanly refuted (readyz bypassing `Store._lock` �
 ### 5.2 "Tell me about a time you overturned your own design / got proven wrong by data"
 
 **④ A fixture is a happy path: adversarial review overturned the claim that "heading-level detection" was a strength**
-- **S**: the chunker's own fixture — 13 unit tests, all green — got touted as a strength ("heading-level detection"). Running it against a real 355-element Chinese research report: 25 of the L1s were wrongly promoted list items, real chapters got cut in half, and 51% of breadcrumb depths were only 1.
+- **S**: the chunker's own fixture — 13 unit tests, all green — got touted as a strength ("heading-level detection"). Running it against a real 355-element research report in the project's original non-English language: 25 of the L1s were wrongly promoted list items, real chapters got cut in half, and 51% of breadcrumb depths were only 1.
 - **T**: in the fixture, numbering and `text_level` always agreed, which happened to exclude the one direction this logic could actually get wrong.
 - **A**: instead of declaring "heading-level detection doesn't work," traced the chain down to a single point, found the distinguishing signal: list numbering restarts (1..9, 1..) while outline numbering doesn't → switched to a reset-aware, whole-document toggle ([src/chunker/core.py:266-274](../../src/chunker/core.py#L266): only promote when the sequence is strictly monotonic), and deliberately picked 7 differentiated documents for a regression matrix to guard against over-fixing.
 - **R**: the target report's L1 count went 25→1, shallow breadcrumbs went 51%→0%, zero regressions across the 7 documents.
@@ -175,7 +175,7 @@ Of 35 suspected issues, 1 was cleanly refuted (readyz bypassing `Store._lock` �
 - **S**: asked about Netflix's total revenue, the system answered with a segment's revenue as if it were the total — with a real citation attached, more dangerous than an outright refusal.
 - **T**: diagnosed a **dual root cause**: on the retrieval side, a table block's searchable text was only its caption — column headers and row labels were locked inside `content_raw` and never went into the embedding, so the table block for a numeric question got crowded out of the top-k by prose; on the generation side, scope evidence (the section path) never made it into the prompt at all, the table body contained not a single word "segment," and the model had no way to judge.
 - **A**: the chunker added header + row-label search signals (data cells deliberately excluded — numbers have no search semantics); the generator folded `section_path` into the source line + added a narrow numeric-range constraint. Key experiment: adding the constraint alone without the evidence was measured to be ineffective — **a constraint with no evidence behind it is an empty gesture.** Rebuilding the index also caught a side effect on the spot: breadcrumbs resurrected 23 empty placeholder table blocks, taking the whole library from 7652→7675 and shifting every chunk id in the document, which was fixed with an existence gate.
-- **R**: the 72-question regression's faithfulness went 0.972→1.000, correctness held at 0.847; the motivating case, asked in Chinese, was directly answered correctly.
+- **R**: the 72-question regression's faithfulness went 0.972→1.000, correctness held at 0.847; the motivating case, asked in the project's original non-English language, was directly answered correctly.
 - **Portable lesson**: fixing a cross-layer bug requires each layer to close its own loop, and you have to keep an eye on second-order side effects from the fix itself.
 
 **⑧ A fix for availability caused a bigger availability incident: pushing locks down**
@@ -283,22 +283,22 @@ More advanced (requires installing the engine dependencies — `pip install -e "
 
 ### Experiment two (pure CPU): reproduce a "confirmed but deferred" real bug yourself
 
-§4.2's chunker#1 (CJK text with no spaces won't chunk down) can be reproduced in two minutes (Git Bash; prefix with `PYTHONPATH=src` if you haven't run `pip install -e .`):
+§4.2's chunker#1 (text in scripts without inter-word spaces won't chunk down) can be reproduced in two minutes (Git Bash; prefix with `PYTHONPATH=src` if you haven't run `pip install -e .`):
 
 ```bash
 cd <repo root>
 PYTHONPATH=src python - <<'PY'
 from chunker.chunking import _sentence_split, est_tokens
-zh = "Retrieval degradation over long context is a known problem in models." * 150   # no-space Chinese text, roughly 3000 characters
+zh = "Retrieval degradation over long context is a known problem in models." * 150   # no-space text in the project's original non-English language, roughly 3000 characters
 pieces = _sentence_split(zh, hi=900, lang="zh")
-print("no-space Chinese:", len(pieces), "pieces; max piece est_tokens =", max(int(est_tokens(p,"zh")) for p in pieces))
+print("no-space original-language text:", len(pieces), "pieces; max piece est_tokens =", max(int(est_tokens(p,"zh")) for p in pieces))
 en = zh.replace("。", "。 ")                              # control group: manually add a space after each period
 pieces2 = _sentence_split(en, hi=900, lang="zh")
 print("space-added control:", len(pieces2), "pieces; max piece est_tokens =", max(int(est_tokens(p,"zh")) for p in pieces2))
 PY
 ```
 
-Measured output: no-space Chinese gives **1 piece, 1,852 tokens** (blowing through the max=900 budget); the control group gives 3 pieces, each ≤892. Then think through two questions: ① why does the regex `(?<=[。！？.!?])\s+` at [src/chunker/core.py:197](../../src/chunker/core.py#L197) fail for Chinese? ② this bug is already confirmed, and the fix sketch (a dual-branch zero-width split for full-width punctuation) already exists — so why wasn't it fixed on the spot? (Hint: fixing it changes the chunk count for the same document → chunk ids shift → the old index and gold answers all misalign — look back at §3-D's 7652→7675 lesson.) Being able to explain question ② clearly means you've understood the core of this piece: **the timing of a fix is itself an engineering decision.**
+Measured output: no-space original-language text gives **1 piece, 1,852 tokens** (blowing through the max=900 budget); the control group gives 3 pieces, each ≤892. Then think through two questions: ① why does the regex `(?<=[。！？.!?])\s+` at [src/chunker/core.py:197](../../src/chunker/core.py#L197) fail for that original language? ② this bug is already confirmed, and the fix sketch (a dual-branch zero-width split for full-width punctuation) already exists — so why wasn't it fixed on the spot? (Hint: fixing it changes the chunk count for the same document → chunk ids shift → the old index and gold answers all misalign — look back at §3-D's 7652→7675 lesson.) Being able to explain question ② clearly means you've understood the core of this piece: **the timing of a fix is itself an engineering decision.**
 
 ---
 

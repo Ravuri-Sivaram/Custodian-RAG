@@ -378,7 +378,7 @@ until curl -sf localhost:8900/readyz; do sleep 5; done
 # 3) Run the equivalence tests (pointed at the real service)
 CUSTODIAN_INFERENCE_URL=http://localhost:8900 pytest tests/test_equivalence_gpu.py -m gpu -v
 ```
-- **E1, vector-level**: for the same batch of texts (Chinese/English, long/short, special characters),
+- **E1, vector-level**: for the same batch of texts (original non-English language/English, long/short, special characters),
   `Dense(cfg_1024).encode_text` vs `RemoteDense.encode_text`, `np.allclose(atol=1e-6)` and `norm≈1.0`; same for images
 - **E2, mixed build/query** (⭐ **the production go/no-go**): build a small library locally → switch to remote to query
   the same collection, and the top-10 doc_id set matches "built local, queried local" exactly (score difference <1e-5)

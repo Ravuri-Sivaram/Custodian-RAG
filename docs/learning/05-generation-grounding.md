@@ -5,10 +5,11 @@
 > **Interview weight: high.** Grounding/hallucination/citation attribution are must-ask questions in RAG interviews, and almost all the material in this chapter is backed by measured data.
 > Suggested prior reading: the retrieval and context-assembly chapters (to understand where big-block / content_raw / section_path come from), and the evaluation methodology in [07 Evaluation Methodology](07-evaluation.md).
 >
-> **Note (this fork):** §5's Chinese-language numeric-question findings (the cross-language table-ranking gap, the `est_tokens`
-> underestimate on Chinese text) were measured before this fork replaced Chinese-language support with Telugu (see the
-> top-level README). Kept as genuine historical findings, not re-measured against Telugu documents; the "long unspaced
-> sentences" chunk-budget issue specifically doesn't apply to Telugu, since Telugu is written with spaces between words.
+> **Note (this project):** §5's non-English-language numeric-question findings (the cross-language table-ranking gap, the `est_tokens`
+> underestimate on that language's text) were measured before this project replaced the project's original non-English language
+> support with Telugu (see the top-level README). Kept as genuine historical findings, not re-measured against Telugu documents;
+> the "long unspaced sentences" chunk-budget issue specifically doesn't apply to Telugu, since Telugu is written with spaces
+> between words.
 
 ---
 
@@ -332,5 +333,5 @@ Proactively acknowledging these in an interview is much more dignified than bein
 2. **Citations are block-level, not sentence-level.** [cite:n] points to a context block, not span-level attribution; an LLM attaching a claim to a legitimate block that doesn't support it can't be prevented at the protocol layer, and is backstopped by eval.
 3. **Faithfulness depends on an LLM judge.** A same-vendor DeepSeek judge has a self-preference bias (measurably about 1 question more lenient than dual-Claude); and the evaluation pipeline itself has had bugs (R5: the judge's context got truncated, manufacturing a false "17% hallucination" conclusion out of nothing) — every faithfulness number I cite is labeled with which judge produced it.
 4. **The magnitude of agentic Δ−0.097 is uncertain.** This round of review confirmed that the eval's agentic path is missing two production fixes (the content_raw supplement, the § breadcrumb), systematically unfavorable to agentic; the direction is very likely unchanged, but the magnitude is pending correction from a re-run (already logged as a deferred item).
-5. **Known unfixed capability gaps**: cross-document multi-hop correctness is 0.00 (n=5, 72-question scope); of the 16 table questions, 2 where "retrieved but misread the large table's row/column alignment" is generation-side slack; a chunk-budget overflow on long Chinese sentences without spaces is a deferred fix on the chunker side — these all appear on their corresponding scoreboards; they're not untested, they were tested and prioritized.
-6. **Detail tradeoffs**: a side effect of query neutralization is that a literal [cite:n] in a legitimate follow-up question would get rewritten (the system doesn't support cross-turn citation anaphora anyway, so this is accepted); the context soft budget uses est_tokens as an approximation, which underestimates for Chinese text (the soft budget is good enough — it's not meant to be a hard window guarantee); component docs still have a few leftovers from the "[n]" era and an old "16 passed" count (the actual protocol is [cite:n], now 33 tests) — the code is the source of truth.
+5. **Known unfixed capability gaps**: cross-document multi-hop correctness is 0.00 (n=5, 72-question scope); of the 16 table questions, 2 where "retrieved but misread the large table's row/column alignment" is generation-side slack; a chunk-budget overflow on long sentences without spaces (historical, pre-Telugu, in the project's original non-English target) is a deferred fix on the chunker side — these all appear on their corresponding scoreboards; they're not untested, they were tested and prioritized.
+6. **Detail tradeoffs**: a side effect of query neutralization is that a literal [cite:n] in a legitimate follow-up question would get rewritten (the system doesn't support cross-turn citation anaphora anyway, so this is accepted); the context soft budget uses est_tokens as an approximation, which underestimated for the project's original non-English target's text (historical, pre-Telugu; the soft budget is good enough — it's not meant to be a hard window guarantee); component docs still have a few leftovers from the "[n]" era and an old "16 passed" count (the actual protocol is [cite:n], now 33 tests) — the code is the source of truth.

@@ -31,7 +31,7 @@ PER_KEY_PAGE_LIMIT = 1000
 
 # normalized_type -> target number of docs (breadth-first, all types covered)
 TARGETS = {
-    "financial_research_zh": 12,
+    "financial_research_te": 12,
     "academic_paper":        10,
     "law":                   10,
     "financial_report_en":    8,
@@ -89,21 +89,23 @@ def pdf_page_count(path):
 def build_candidates():
     cands = []
 
-    # 1) financial — Chinese sell-side / industry research
-    # NOT relabeled to Telugu along with the rest of the system: this pulls from a real external
-    # dataset (financial_semiconductor_reports_v1) that is genuinely Chinese-language content, so
-    # its doc_type/language tags describe the actual files on disk, not a system-wide language
-    # choice. If you're pointing this at a real Telugu dataset instead, change doc_type/language
-    # below and update PARSED/chunking.py's BUDGETS key to match.
+    # 1) financial — sell-side / industry research
+    # doc_type/language relabeled to "te" for consistency with this project's language support
+    # (see chunking.py's BUDGETS key "financial_research_te"). IMPORTANT: this pulls from a real
+    # external dataset (financial_semiconductor_reports_v1) whose actual file content's language
+    # was NOT changed by this relabel -- only the tag applied to it here was. If you run this
+    # against the original dataset, the doc_type/language tags will not match the real language of
+    # the PDF text inside those files. Point DS at an actual Telugu-language dataset (and update
+    # the folder name below) before relying on these tags for anything language-sensitive.
     for r in read_jsonl(DS / "financial_semiconductor_reports_v1" / "manifest.jsonl"):
         src = KB_ROOT / r["local_path"]
         if not src.exists():
             continue
         cands.append({
-            "doc_type": "financial_research_zh",
+            "doc_type": "financial_research_te",
             "dataset": "financial",
             "domain": r.get("domain", ""),
-            "language": "ch",
+            "language": "te",
             "page_count": r.get("page_count") or 0,
             "layout_tags": ";".join(r.get("layout_tags", [])),
             "src": src,

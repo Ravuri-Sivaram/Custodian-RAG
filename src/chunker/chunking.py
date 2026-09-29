@@ -49,15 +49,14 @@ def est_tokens(text, lang):
     # recalibrate it.
     #
     # The Telugu value (1.0) is a CONSERVATIVE PLACEHOLDER, NOT empirically measured the way the
-    # English/former-CJK values above were. Telugu is an abugida script (base consonant + vowel
-    # sign + optional virama per visual character), and tokenizers trained mostly on Latin/CJK
-    # corpora tend to fragment underrepresented Indic scripts into individual codepoints or even
-    # UTF-8 byte-pairs rather than whole syllables — often a WORSE (lower) chars-per-token ratio
-    # than even Chinese got here previously. 1.0 is deliberately conservative (assumes heavy token
-    # use per character) to avoid the same truncation risk the CJK alias was added to prevent, but
-    # it must be measured against real Telugu documents through the actual Qwen3-VL/DeepSeek
-    # tokenizer before this is trusted in production — see the English paragraph above for exactly
-    # this kind of validation.
+    # English value above was. Telugu is an abugida script (base consonant + vowel sign + optional
+    # virama per visual character), and tokenizers trained mostly on Latin scripts tend to fragment
+    # underrepresented Indic scripts into individual codepoints or even UTF-8 byte-pairs rather than
+    # whole syllables — often a much WORSE (lower) chars-per-token ratio than English gets. 1.0 is
+    # deliberately conservative (assumes heavy token use per character) to avoid an under-budgeted
+    # chunk being truncated mid-token, but it must be measured against real Telugu documents through
+    # the actual Qwen3-VL/DeepSeek tokenizer before this is trusted in production — see the English
+    # paragraph above for exactly this kind of validation.
     return len(text or "") / (1.0 if (lang or "").lower().startswith("te") else 4.0)
 
 

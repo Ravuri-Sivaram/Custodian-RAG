@@ -1,8 +1,8 @@
 # Architecture / Design
 
-> **Note (this fork):** §7's adversarial-review findings and the "Chinese research reports" leveling tier below were
-> measured against a real Chinese-language dataset (`financial_research_zh`), from before this fork replaced
-> Chinese-language support with Telugu (see the top-level README). Kept as genuine historical findings, not re-measured
+> **Note (this project):** §7's adversarial-review findings and the "research reports in the project's original non-English language" leveling tier below were
+> measured against a real dataset in that original language (`financial_research_zh`), from before this project replaced
+> that original-language support with Telugu (see the top-level README). Kept as genuine historical findings, not re-measured
 > against Telugu documents.
 
 ## 1. Position in the pipeline
@@ -84,7 +84,7 @@ Once settled, the essence of the design = **multi-signal-leveled eager parent-ch
 
 ## 7. Adversarial review findings: the fixture is happy-path (2026-06)
 
-We ran the component on two documents side by side for comparison — `examples/fixtures` (13 elements, English academic paper, ideal case) versus a real research report `financial_research_zh__AP202601131816964706` (355 elements, Chinese, dense cover page + cyclically-numbered bullets). **21 findings, 18 confirmed / 0 refuted.** Core conclusion: **on the fixture, heading numbering and `text_level` always agree, which rules out the one direction in which this leveling scheme can actually go wrong (numbering unconditionally overriding the parser)** — so the earlier claim that "numbering-based leveling is a real strength" was an artifact that only held up on clean documents, and flipped on a messy real-world report.
+We ran the component on two documents side by side for comparison — `examples/fixtures` (13 elements, English academic paper, ideal case) versus a real research report `financial_research_zh__AP202601131816964706` (355 elements, in the project's original non-English language, dense cover page + cyclically-numbered bullets). **21 findings, 18 confirmed / 0 refuted.** Core conclusion: **on the fixture, heading numbering and `text_level` always agree, which rules out the one direction in which this leveling scheme can actually go wrong (numbering unconditionally overriding the parser)** — so the earlier claim that "numbering-based leveling is a real strength" was an artifact that only held up on clean documents, and flipped on a messy real-world report.
 
 | Dimension | On the fixture | On the real research report (before fix) | Finding |
 |---|---|---|---|
@@ -129,7 +129,7 @@ The quality of leveling **depends on how clean the parser's `text_level` is**, a
 
 - **Strong (parser's text_level is already correct)**: clean academic/technical reports, English standards documents — the parser directly gets most heading levels right (e.g., for the Attention paper the parser gives 25 headings correctly as `text_level=1`), and numbering only does decimal-point refinement. Breadcrumb is accurate, zero LLM needed. This is the tier the fixture represents.
 - **Medium (parser flattens headings + numbering is a real outline)**: deep-dive reports — the parser flattens all headings to a single level, but the numbering `1,2,3` is monotonic, so reset-aware promotion recovers the chapter structure. Usable.
-- **Degraded (parser flattens headings + numbering is a list)**: weekly reports, cover-page-dense Chinese research reports — numbering restarts cyclically, so reset-aware **deliberately gives up on promotion**, honestly degrading to a "single root + flat L2" generic parent-child structure (no chapter nesting); cover-page labels still end up as small noise sections (per-page banners are already removed by the round-3 guard). **Don't expect precise hierarchy in this tier — treat it as just "size-chunking with a breadcrumb attached."**
+- **Degraded (parser flattens headings + numbering is a list)**: weekly reports, cover-page-dense research reports in the project's original non-English language — numbering restarts cyclically, so reset-aware **deliberately gives up on promotion**, honestly degrading to a "single root + flat L2" generic parent-child structure (no chapter nesting); cover-page labels still end up as small noise sections (per-page banners are already removed by the round-3 guard). **Don't expect precise hierarchy in this tier — treat it as just "size-chunking with a breadcrumb attached."**
 
 - **Not good at**: hierarchy on pure scanned documents, cross-hop synthesis (that's GraphRAG/RAPTOR's job), remote cross-references (not implemented), chapter integrity (when the same text_level mixes chapters and lists, see round-4 candidate ① in §7).
 - **Recommendation**: anchor your expectations to "how clean is the parser's text_level," not to doc_type. Clean structure → precise; flattened by the parser → degrades to generic parent-child. This is a structural ceiling, not a bug.

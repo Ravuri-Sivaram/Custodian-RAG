@@ -18,8 +18,8 @@ Each RAG component was sharpened on its own, then folded into one repository: mu
 
 > **A note on language.** The code, CLI, comments, deep-dive documentation under `docs/`
 > (including the 12-part learning series), and commit history are entirely in English.
-> The system's non-English *data* language is Telugu (see [What this fork
-> changed](#what-this-fork-changed) below) — that's a separate thing from what language
+> The system's non-English *data* language is Telugu (see [What this project
+> changed](#what-this-project-changed) below) — that's a separate thing from what language
 > the project's own text is written in.
 
 ---
@@ -28,16 +28,16 @@ Each RAG component was sharpened on its own, then folded into one repository: mu
 
 This is not another chunking toy. Every significant decision here is backed by a measurement, argued through several rounds of adversarial review, and is running today over 77 real documents and 7,652 chunks. Installing it is one line: `pip install -e '.[dev]'` (src-layout, editable).
 
-## What this fork changed
+## What this project changed
 
-Starting from the upstream project, this fork did four things, in this order, without changing the retrieval/generation logic or the request contracts:
+Starting from the reference implementation this project was built on, four things were done, in this order, without changing the retrieval/generation logic or the request contracts:
 
-1. **Translated every source comment, docstring, and `docs/` page from Chinese to English** — 37 source files (~1,140 lines) plus the full `docs/` tree, including the 12-part learning series. Internal review shorthand that had accumulated in the comments (tags like `R1`–`R5`, `B3.A`, `"seal review #9"`) was rewritten as plain descriptive prose rather than carried over as opaque codes. Where a `docs/` page discusses historical numbers measured specifically against the original Chinese-language dataset (before this fork replaced Chinese-language support with Telugu — see below), the prose was translated but the measurements were left as historical record rather than silently relabeled "Telugu," with an inline note where that matters (e.g. [docs/components/embedder/DESIGN.md](docs/components/embedder/DESIGN.md)).
+1. **Translated every source comment, docstring, and `docs/` page to English** — 37 source files (~1,140 lines) plus the full `docs/` tree, including the 12-part learning series. Internal review shorthand that had accumulated in the comments (tags like `R1`–`R5`, `B3.A`, `"seal review #9"`) was rewritten as plain descriptive prose rather than carried over as opaque codes. Where a `docs/` page discusses historical numbers measured against this project's original non-English language support (before this project switched that support to Telugu — see below), the prose was translated but the measurements themselves were left as historical record rather than silently relabeled "Telugu," with an inline note where that matters (e.g. [docs/components/embedder/DESIGN.md](docs/components/embedder/DESIGN.md)).
 2. **Renamed six modules whose names didn't say what they held**, and updated every import across `src/`, `tests/`, `scripts/`, and `docs/` to match (see the table below). No public package API changed — `from chunker import Chunker`, `from embedder import Retriever`, `from generator import Generator` all still work exactly as before, because these were internal file renames, not package-interface changes.
-3. **Fixed one algorithmic hot spot and one batching gap**, both verified behavior-preserving against the original before being applied (see [Optimizations](#optimizations-in-this-fork)).
+3. **Fixed one algorithmic hot spot and one batching gap**, both verified behavior-preserving against the original before being applied (see [Optimizations](#optimizations-in-this-project)).
 4. **Reviewed the dependency stack for better alternatives** — one dependency added (a dev-only linter), nothing swapped out; see [Technology stack](#technology-stack) for the reasoning on each choice.
 
-Everything below reflects the fork's current state. `python3 -m py_compile` was run on every changed file; the project's own `pytest` suite and the GPU `eval/acl_regression.py` regression could not be executed in the environment this work was done in (no GPU, no package registry access) — **run them yourself before trusting this in production**:
+Everything below reflects the project's current state. `python3 -m py_compile` was run on every changed file; the project's own `pytest` suite and the GPU `eval/acl_regression.py` regression could not be executed in the environment this work was done in (no GPU, no package registry access) — **run them yourself before trusting this in production**:
 
 ```bash
 pip install -e '.[dev]'
@@ -56,7 +56,7 @@ python eval/acl_regression.py     # needs a GPU + a built index
 | `custodian/obs.py` | `custodian/observability.py` | an abbreviation with no upside; nothing elsewhere in the codebase called it "obs" |
 | `custodian/smart.py` | `custodian/smart_ask.py` | matches the feature's actual name everywhere else in the code and config (`cfg.smart_ask`, the `smart-ask` sections of `service.py`) — the file was the only place still calling it just "smart" |
 
-## Optimizations in this fork
+## Optimizations in this project
 
 Both changes below were verified byte-identical / count-identical against the pre-change behavior using randomized equivalence tests (in `Retriever` a 200-trial run over synthetic section trees; in `Embedder` a 50-trial × 6-batch-size sweep) before being applied to the real files — there is no test harness in this sandbox capable of running the project's actual GPU/Qdrant-backed suite, so this was the verification available.
 
@@ -76,7 +76,7 @@ The stack was reviewed end to end for genuinely better alternatives, not replace
 | Agent protocol | `mcp` (Anthropic's Python SDK) | **Keep.** This *is* the reference implementation of the protocol; there is no alternative to evaluate. |
 | LLM client | `openai` client pointed at DeepSeek's OpenAI-compatible endpoint | **Keep, with a note.** The codebase already defines a pluggable `LLMClient` protocol (`generator/llm.py`), so swapping backends is already cheap. If this project ever needs to run several LLM backends side by side (local vLLM + DeepSeek + Claude), a router library like `litellm` would remove some hand-rolled retry/error-normalization code — worth a look then, not worth adding now for a single backend. |
 | Vector store | Qdrant (embedded, upgrading to server mode) | **Keep.** Named dense+sparse vectors with native RRF fusion and payload-based ACL filtering are exactly what this system needs, and the embedded→server upgrade path is the *same client*, which the three-way branch in `Store.__init__` already exploits. Alternatives (LanceDB, Chroma) don't offer a clear win here and would cost the existing hybrid-search and ACL-filter integration work. |
-| Sparse/Telugu tokenization | regex-based (`embedder/sparse.py`) | **Changed.** This fork replaced Chinese-language support with Telugu, and Telugu (unlike Chinese) is written with spaces between words, so the `jieba` word-segmenter dependency was removed outright rather than replaced with another dictionary-based segmenter. Tokenization is now a Telugu-Unicode-block regex plus the existing alphanumeric exact-match regex — no new dependency. This is a coarser approach than a real morphological analyzer (Telugu is agglutinative, so it under-splits compound words), which is a reasonable trade-off for BM25 candidate generation but is flagged here for anyone tuning sparse recall further. |
+| Sparse/Telugu tokenization | `indic-nlp-library` (optional) with a zero-dependency regex fallback (`embedder/sparse.py`) | **Changed.** This project switched the project's non-English language support to Telugu. Telugu is written with spaces between words, so the `jieba` word-segmenter dependency (needed for scripts without inter-word spaces) was removed outright. `sparse.py` now tries `indic-nlp-library` (AI4Bharat) first — a maintained Indic-NLP library whose normalizer collapses Unicode-equivalent Telugu spellings and whose tokenizer handles word boundaries more carefully than a raw regex — and falls back to a Telugu-Unicode-block regex plus the existing alphanumeric exact-match regex if it isn't installed, so there's no hard new dependency. All tiers apply `unicodedata.normalize("NFC", ...)` first (a real, verified fix: some visually-identical Telugu spellings decompose to different Unicode byte sequences and would otherwise silently fail to match between doc and query — see `tests/engine/test_sparse.py`). ⚠ `indic-nlp-library` could not be installed or tested in the sandbox this was developed in (no PyPI access); it's wired in but unverified — install via the `telugu` extra and confirm it actually improves recall on real documents before depending on it in production. Neither tier is a true morphological analyzer (Telugu is agglutinative, so inflected forms of a word aren't unified), which is a reasonable trade-off for BM25 candidate generation but is flagged here for anyone tuning sparse recall further. |
 | GPU embedding/rerank serving | `transformers` + raw forward passes (`inference_server.py`), with a `vLLM`-backed alternative already scaffolded (`inference_vllm_adapter.py`) | **Recommend promoting the vLLM path to the default for production.** vLLM's continuous batching and PagedAttention give much better GPU utilization under concurrent load than serialized raw forward passes: the codebase already built this adapter but doesn't point to it as the primary path anywhere in the docs. This is a deployment/documentation recommendation, not a code change — the two paths coexist today. |
 | Dev tooling | `pytest` only | **Added `ruff`** to the `dev` extra (config-only change, zero runtime impact) — one fast tool covering linting and formatting in place of hand-managing style. |
 
@@ -237,7 +237,7 @@ sudo systemctl start custodian
 
 ## Want to understand RAG, not just use it?
 
-The repository also carries a **[RAG learning and interview-prep set](docs/learning/)**: this system — repeatedly contradicted by its own data and repeatedly fixed — taken apart into **12 pieces and 4,122 lines** of tutorial. It runs from chunking, hybrid retrieval, the permission model and generation grounding all the way through agentic use, evaluation methodology and multi-replica scale-out. Every piece carries code anchors, measured numbers, interview framings, and experiments you can run yourself. Translated from the original Chinese to English by this fork (see [What this fork changed](#what-this-fork-changed)).
+The repository also carries a **[RAG learning and interview-prep set](docs/learning/)**: this system — repeatedly contradicted by its own data and repeatedly fixed — taken apart into **12 pieces and 4,122 lines** of tutorial. It runs from chunking, hybrid retrieval, the permission model and generation grounding all the way through agentic use, evaluation methodology and multi-replica scale-out. Every piece carries code anchors, measured numbers, interview framings, and experiments you can run yourself. Translated to English by this project (see [What this project changed](#what-this-project-changed)).
 
 | What you want | Which pieces |
 |---|---|
@@ -285,11 +285,11 @@ python -m pytest tests -q --ignore=tests/engine    # product layer only (fake re
 
 Neither touches a GPU, a Qdrant server or the network, and [CI](.github/workflows/ci.yml) runs them on every push. The suite size, its product/engine split and the measurement provenance live in [docs/TESTING.md](docs/TESTING.md) §1 — the single authority for that number. The GPU end-to-end zero-leak regression (`eval/acl_regression.py`, on WSL + a 4090), concurrency benchmarks, backup drills and security review records are in the same document.
 
-> This fork's changes were verified by `py_compile` and standalone randomized equivalence tests (see [Optimizations](#optimizations-in-this-fork)); the commands above were **not** run in the environment this fork was produced in (no GPU, no package registry access) and should be run before deploying.
+> This project's changes were verified by `py_compile` and standalone randomized equivalence tests (see [Optimizations](#optimizations-in-this-project)); the commands above were **not** run in the environment this project was produced in (no GPU, no package registry access) and should be run before deploying.
 
 ## Documentation index
 
-This documentation reflects the pre-fork module names in a few places (the file renames above haven't been propagated into `docs/` yet — the code itself is the source of truth).
+This documentation reflects the earlier module names in a few places (the file renames above haven't been propagated into `docs/` yet — the code itself is the source of truth).
 
 | Document | What it covers |
 |---|---|

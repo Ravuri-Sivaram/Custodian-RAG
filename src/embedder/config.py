@@ -23,7 +23,7 @@ class EmbedConfig:
     gpu_name_must_contain: str = "4090"    # FASTEST_FIRST numbering can shift -> assert by name to pin the 4090 (never a 5070)
 
     # --- sparse: BM25 (regex-based Telugu/alphanumeric tokenization) ---
-    stopwords: frozenset[str] = field(default_factory=frozenset)   # Chinese stopwords can be injected here
+    stopwords: frozenset[str] = field(default_factory=frozenset)   # Telugu stopwords can be injected here
 
     # --- Qdrant (embedded to start; switch to server mode once the scale calls for it) ---
     qdrant_path: str = os.path.expanduser("~/qdrant_data")

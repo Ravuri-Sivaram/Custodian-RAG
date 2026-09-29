@@ -7,8 +7,8 @@
 > Convention: **objections, fixes, and deliberate non-fixes** for engine components are recorded here, each with motivation + action + verification.
 > The corresponding changes have matching commits in this repo's git history.
 
-> **Note (this fork):** the Chinese-phrased anecdotes below (the motivating regression case, the cross-language table-ranking
-> tests) predate this fork's replacement of Chinese-language support with Telugu (see the top-level README). Kept as
+> **Note (this project):** the non-English-phrased anecdotes below (the motivating regression case, the cross-language table-ranking
+> tests) predate this project's replacement of the project's original language support with Telugu (see the top-level README). Kept as
 > genuine historical record, not re-measured against Telugu.
 
 ## Fixed
@@ -52,7 +52,7 @@
   an **existence gate** to prevent ghost chunks (without the gate this would add +23 chunks and shift chunk ids — caught and fixed on the spot during the rebuild, detail in
   TESTING §3). Both indexes were fully rebuilt.
 - **Verification**: 44 chunker tests; on the 72-question regression, correctness held steady, 3 questions shifted due to redundant gold answers (all still answered correctly),
-  and the motivating case was answered correctly directly in its original Chinese phrasing. Verdict: kept (from a damage-severity view, unlocking a wrong-answer category outweighs the redundant-recall displacement).
+  and the motivating case was answered correctly directly in its original non-English phrasing. Verdict: kept (from a damage-severity view, unlocking a wrong-answer category outweighs the redundant-recall displacement).
 - **Related finding**: the gold set had no table questions — an evaluation blind spot (filed as TODO: targeted gold-question generation).
 
 ## Deliberately Not Fixed (Recorded, Open to Reconsideration)
@@ -69,8 +69,8 @@ eval only uses the top_k/rerank keywords (confirmed at run_eval.py:80), so it wa
 **Verification** (as measured at the time, before the single-repo pytest unification, counted separately by repo):
 generator side, 17 tests (+1 for the pass-through/narrow-signature compatibility), product side, 38 tests (+2). Real-index confirmation (reported honestly):
 English "total revenue" phrasing + `--kind table --rerank` → **correctly answers $6,779,511 thousand, citing the p.16 summary table**;
-pure Chinese phrasing with kind=table + rerank → still fails to retrieve the p.16 table but **honestly refuses** (explicitly states it only sees segment data);
-⚠ Chinese + kind=table + top_k 15 **without rerank** once mistakenly answered the segment revenue (4,180,339) as the company's total revenue —
+pure non-English phrasing with kind=table + rerank → still fails to retrieve the p.16 table but **honestly refuses** (explicitly states it only sees segment data);
+⚠ non-English + kind=table + top_k 15 **without rerank** once mistakenly answered the segment revenue (4,180,339) as the company's total revenue —
 the remaining gap for cross-language numeric questions and usage guidance are in the TODO (P2) and TESTING §3. **Recommended approach for numeric questions:
 `--kind table --rerank` plus keywords in the document's own language (e.g. "total revenues" for an English financial report)**.
 

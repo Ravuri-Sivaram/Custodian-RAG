@@ -1,11 +1,11 @@
 # embedder design
 
-> **Note (this fork):** this document is kept as the historical design record from when the system's non-English tokenization
-> target was Chinese (`jieba`), including the measured numbers below (e.g. the chars/token calibration in §"est_tokens → real
-> tokenizer"). This fork later replaced Chinese-language support with Telugu; the current sparse tokenizer is a Telugu-Unicode-range
+> **Note (this project):** this document is kept as the historical design record from when the system's non-English tokenization
+> target was the project's original non-English language (`jieba`), including the measured numbers below (e.g. the chars/token calibration in §"est_tokens → real
+> tokenizer"). This project later replaced that original-language support with Telugu; the current sparse tokenizer is a Telugu-Unicode-range
 > regex (no dictionary segmenter needed, since Telugu is written with spaces between words) in `src/embedder/sparse.py`, and current
 > behavior may differ from what's narrated below. This file has not been rewritten to match, since the measurements here are
-> specific to the old jieba/Chinese implementation and would be fabricated if simply relabeled "Telugu." See the "Sparse/Telugu
+> specific to the old jieba/prior-language implementation and would be fabricated if simply relabeled "Telugu." See the "Sparse/Telugu
 > tokenization" row in the top-level README's Technology stack table for what's actually implemented today.
 
 > The embed + retrieval component of the RAG pipeline, taking chunker's `Chunk[]` as input. **Local 4090** deployment: dense = Qwen3-VL-Embedding-8B (multimodal), sparse = **BM25 (jieba tokenization + Qdrant IDF)**, vector store = Qdrant (dense+sparse hybrid + payload filter). Location: `src/embedder/` (a package alongside `src/chunker/` in the same repo).
@@ -29,7 +29,7 @@ The component **only understands chunker's `Chunk`** (text/image_path/image_only
 | Sparse | **BM25** (jieba tokenization + Qdrant `Modifier.IDF`) | Client-side jieba tokenization → tokens; doc sparse = term frequency, query sparse = 1; Qdrant computes the BM25 score server-side using IDF. **Zero GPU, CPU is enough** |
 | Vector store | **Qdrant** | named dense+sparse; `query_points(prefetch=[dense,sparse], query=FusionQuery(RRF), query_filter=Filter)` for server-side hybrid |
 
-**Why sparse = BM25 rather than BGE-M3**: three rounds of research converged on this — ① BM25 is the dominant production choice for sparse in the industry (the standard in frameworks/Qdrant); ② the precise-term matching your Chinese financial reports/legal documents need (numbers, statutory clause numbers, model numbers) is exactly BM25's strength (empirically, on financial documents BM25 beats even the strongest commercial dense models); ③ zero GPU, and cleanly decoupled from the Qwen3-VL dense model; ④ BGE-M3's sparse mode is a minority choice and weak on Chinese (MIRACL-zh 36.3), and its mainstream value (dense) is already replaced by Qwen3-VL. **Kept for the record: the measured comparison of BM25 vs BGE-M3-sparse on real precise-term queries** (see §7, "to be verified").
+**Why sparse = BM25 rather than BGE-M3**: three rounds of research converged on this — ① BM25 is the dominant production choice for sparse in the industry (the standard in frameworks/Qdrant); ② the precise-term matching your original non-English-language financial reports/legal documents need (numbers, statutory clause numbers, model numbers) is exactly BM25's strength (empirically, on financial documents BM25 beats even the strongest commercial dense models); ③ zero GPU, and cleanly decoupled from the Qwen3-VL dense model; ④ BGE-M3's sparse mode is a minority choice and weak on that original non-English language (MIRACL-zh 36.3), and its mainstream value (dense) is already replaced by Qwen3-VL. **Kept for the record: the measured comparison of BM25 vs BGE-M3-sparse on real precise-term queries** (see §7, "to be verified").
 
 ## 3. Qdrant collection
 
@@ -80,7 +80,7 @@ for chunk in chunks:
     vec = {"dense": dense} | ({"sparse": sparse} if sparse else {})
     client.upsert("rag_chunks", [PointStruct(id, vector=vec, payload=acl_split(chunk)+meta(chunk))])
 
-# bm25_sparse(text): tokens = jieba.cut(text) (Chinese); stopwords removed; token->uint32 stable hash;
+# bm25_sparse(text): tokens = jieba.cut(text) (project's original non-English language); stopwords removed; token->uint32 stable hash;
 #                    returns SparseVector(indices=hashes, values=term_counts)  ← Qdrant's IDF modifier does the scoring
 ```
 
@@ -125,9 +125,9 @@ for h in dedup_by_section(hits):                  # dedup: section_id=None is no
 
 - **sparse=BM25**: the industry-standard choice + strong on precise terms + zero GPU (only dense uses the GPU, which greatly simplifies the environment).
 - **dense MRL=1024 as a starting point**: 4096 costs 4x, and 1024 usually costs almost nothing in recall; adjust further based on retrieval quality.
-- **Chinese tokenization**: jieba is a variable here — could also switch to Qdrant 1.15+'s server-side CJK tokenizer (`Document` + BM25). Starting with client-side jieba (more controllable), with a measured comparison.
+- **Tokenization for the original non-English language**: jieba is a variable here — could also switch to Qdrant 1.15+'s server-side tokenizer for scripts without inter-word spaces (`Document` + BM25). Starting with client-side jieba (more controllable), with a measured comparison.
 - **token→uint32**: a stable hash (some small chance of collision, acceptable); doc and query must use the same hash function.
-- **est_tokens → real tokenizer**: ✅ measured against 2927 real chunks (Qwen3-VL tokenizer) — for prose, chars/token ≈ 3.85 (≈ the current value of 4.0, error < 4%), with the deviation concentrated entirely in number/table-dense documents (financial reports 5.08, government documents 5.35, Chinese research reports 1.51); a single value can't serve both clusters, and changing the mean would actually hurt prose — **keeping the current value, not re-calibrating** (see the comment on core.est_tokens).
+- **est_tokens → real tokenizer**: ✅ measured against 2927 real chunks (Qwen3-VL tokenizer) — for prose, chars/token ≈ 3.85 (≈ the current value of 4.0, error < 4%), with the deviation concentrated entirely in number/table-dense documents (financial reports 5.08, government documents 5.35, the prior non-English research-report category 1.51); a single value can't serve both clusters, and changing the mean would actually hurt prose — **keeping the current value, not re-calibrating** (see the comment on core.est_tokens).
 - **The 4th tier, oversplitting**: retrieve uses `source_indices` to stitch back together xlsx records that were split across columns/row groups.
 
 **To be verified (measured, all at once once the environment is ready)**:
@@ -185,7 +185,7 @@ The adversarial workflow (4 finders covering ACL security/data flow/retrieval co
 | 4 | Changing `dense_dim` lets `ensure_collection` return early → dimension drift causes a crash or bad retrieval | high | An existing branch now asserts size==dense_dim, failing fast (`verify_seal4`) |
 | 5 | BM25 doc term frequency double-counts alphanumeric tokens (jieba+regex) → asymmetric distortion | medium | `tokenize` now only supplements exact strings jieba didn't fully extract (`test_sparse`) |
 | 6 | `dedup_by_section` was collapsing every `section_id=None` into a single entry → lost recall | high | `None` now degrades to dedup by chunk_id (`test_retrieve`) |
-| 7 | `assemble_big`'s lang check only recognized `ch`; the `zh` alias fell through to `en` → Chinese token counts underestimated by 2.35× | high | Aligned with `est_tokens`'s `startswith(("ch","zh"))` (chunker regression) |
+| 7 | `assemble_big`'s lang check only recognized `ch`; the `zh` alias fell through to `en` → token counts for the project's original non-English language underestimated by 2.35× | high | Aligned with `est_tokens`'s `startswith(("ch","zh"))` (chunker regression) |
 | 8 | The embedder used a free function that dropped the per-doc_type budget → slides/policy got truncated | medium | `_ChunkShim` now carries doc_type, and picks the budget from `BUDGETS` accordingly (e2e: 1286→800) |
 | 9 | Sidecar writes were non-atomic → a crash could leave a half-written JSON file → assemble would crash on that doc permanently | high | Now writes to .tmp + fsync + `os.replace` (atomic) |
 | 10 | Missing/corrupt sidecar had no fallback → one bad hit could take down the whole query | high | `_load_sidecar` now raises explicitly + `search_with_context` degrades gracefully via try/except (`test_retrieve`) |

@@ -12,8 +12,8 @@ import re
 
 # NOTE on the Telugu segment below: best-effort, NOT written or reviewed by a fluent Telugu
 # speaker. Telugu numeral/quantity words and common financial terms are included on the same
-# principle as the former Chinese segment (lenient matching -- false positives just union in a
-# few extra table chunks, cheap; false negatives risk an incomplete numeric answer, expensive).
+# lenient-matching principle as the rest of this regex (false positives just union in a few extra
+# table chunks, cheap; false negatives risk an incomplete numeric answer, expensive).
 # Get this reviewed by a native speaker before relying on it in production.
 _NUM_HINT = re.compile(
     r"[0-9౦-౯]"                                                      # Arabic digits + Telugu digits (౦-౯)

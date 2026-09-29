@@ -33,6 +33,13 @@ parse = ["pypdf", "requests", "python-dotenv"]
 table = ["openpyxl", "xlrd"]
 # Legacy fallback adapters (the primary office path is MinerU; docx/pptx adapters are a deprecated fallback)
 docx = ["python-docx", "python-pptx"]
+# Better Telugu tokenization for embedder/sparse.py's BM25 path (Unicode-aware normalization +
+# word segmentation from an actively-maintained Indic-NLP library, instead of the built-in
+# zero-dependency script-boundary regex fallback). Optional: sparse.py auto-detects at import time
+# and degrades to the regex tokenizer if this isn't installed. NOT installable/testable in the
+# sandbox this was developed in (no network access to PyPI) -- verify it actually installs and
+# behaves as expected before depending on it in production; see sparse.py's module docstring.
+telugu = ["indic-nlp-library>=0.92"]
 dev = ["pytest>=8", "ruff>=0.7"]
 
 [project.scripts]

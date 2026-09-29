@@ -8,8 +8,8 @@ ingest → parse → [ chunker ] → embed
 
 Splits a parser's output into **chunks carrying a hierarchical skeleton (breadcrumb + section tree)** for the embedding stage to embed and store, and at query time provides **small-to-big** big-block assembly. Pure Python, **zero runtime dependencies**. The core logic has been validated on **77 real documents + multiple rounds of adversarial review**, and it ships with **42** unit tests, all passing (`test_core.py` + `test_table.py`).
 
-> **Note (this fork):** the "cover-page-dense Chinese research reports" example below is a real historical leveling
-> finding (measured against `financial_research_zh`, from before this fork replaced Chinese-language support with
+> **Note (this project):** the "cover-page-dense research reports in the project's original non-English language" example below is a real historical leveling
+> finding (measured against `financial_research_zh`, from before this project replaced that original-language support with
 > Telugu — see the top-level README), kept as genuine record and not re-measured against Telugu documents.
 
 > **Five formats verified**: PDF (MinerU, 77 documents) / scanned PDF (OCR, 40 documents, 13 languages) / **Word (.docx), PPT (.pptx)** via MinerU's native office backend (~50 documents each; `adapters/docx.py`/`pptx.py` demoted to zero-dependency fallbacks) / **Excel (.xlsx)** via the separate `table_chunker.py` (a grid, not a document flow — the heading-tree doesn't apply, but it outputs the same Chunk schema). See [`ARCHITECTURE.md` §Format coverage](ARCHITECTURE.md) and [`../../methodology/MULTIFORMAT_IMPL.md`](../../methodology/MULTIFORMAT_IMPL.md).
@@ -85,4 +85,4 @@ chunker/
 
 ## Honest positioning
 
-The quality of leveling **depends on how clean the parser's `text_level` is, not on doc_type**: when the parser gets it right (clean academic papers/standards documents) → precise hierarchy, accurate breadcrumb; when the parser flattens things but the numbering is monotonic (deep-dive reports) → reset-aware promotion recovers the chapter structure; when the parser flattens things and the numbering is cyclic (weekly reports, cover-page-dense Chinese research reports) → it honestly degrades to a "single root + flat L2" generic size-based chunking, **don't expect chapter nesting**. Three rounds of adversarial review (0 refuted), format coverage, and boundaries are detailed in [`docs/ARCHITECTURE.md` §7 / §Format / §Scope of applicability](ARCHITECTURE.md).
+The quality of leveling **depends on how clean the parser's `text_level` is, not on doc_type**: when the parser gets it right (clean academic papers/standards documents) → precise hierarchy, accurate breadcrumb; when the parser flattens things but the numbering is monotonic (deep-dive reports) → reset-aware promotion recovers the chapter structure; when the parser flattens things and the numbering is cyclic (weekly reports, cover-page-dense research reports in the project's original non-English language) → it honestly degrades to a "single root + flat L2" generic size-based chunking, **don't expect chapter nesting**. Three rounds of adversarial review (0 refuted), format coverage, and boundaries are detailed in [`docs/ARCHITECTURE.md` §7 / §Format / §Scope of applicability](ARCHITECTURE.md).

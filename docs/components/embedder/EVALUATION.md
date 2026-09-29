@@ -1,8 +1,8 @@
 # embedder retrieval quality evaluation
 
-> **Note (this fork):** measured against the original jieba/Chinese sparse tokenizer and the original English/Chinese `est_tokens`
-> divisors. This fork later replaced Chinese-language support with Telugu (see [DESIGN.md](DESIGN.md)'s note at the top); the
-> Chinese-specific numbers below (e.g. the chars/token divisor for "Chinese research reports") describe the old implementation and
+> **Note (this project):** measured against the original jieba sparse tokenizer for the project's prior non-English language and the original English/prior-language `est_tokens`
+> divisors. This project later replaced that prior-language support with Telugu (see [DESIGN.md](DESIGN.md)'s note at the top); the
+> prior-language-specific numbers below (e.g. the chars/token divisor for "the prior non-English research-report category") describe the old implementation and
 > have not been re-measured for Telugu — the new Telugu `est_tokens` divisor is an unverified placeholder pending a real
 > measurement run of `eval/component_retrieval/retok.py` against Telugu documents.
 
@@ -15,13 +15,13 @@ The chunker has a data-driven chunking evaluation (`eval_chunks.py` + MMDocIR gr
 
 1. **Sparse model choice**: BM25 vs BGE-M3-sparse — which should go into the hybrid.
 2. **RRF weighting**: the optimal ratio for fusing dense and sparse + whether hybrid genuinely beats either route alone.
-3. **est_tokens recalibration**: should chunker's char/token heuristic (Chinese 1.7, English 4.0) be recalibrated against the real Qwen3-VL tokenizer.
+3. **est_tokens recalibration**: should chunker's char/token heuristic (prior non-English language 1.7, English 4.0) be recalibrated against the real Qwen3-VL tokenizer.
 
 ## 2. Methodology
 
 ### 2.1 Evaluation benchmark
 
-- **Corpus**: 14 documents selected from `parsed/` → chunker splits them into **1067 chunks**. Covers academic_paper / law / financial_report_en / **financial_research_zh** / government, a Chinese-English mix (109 Chinese chunks, filling in the chunker evaluation's blind spot for Chinese).
+- **Corpus**: 14 documents selected from `parsed/` → chunker splits them into **1067 chunks**. Covers academic_paper / law / financial_report_en / **financial_research_zh** / government, a mix of English and the project's prior non-English language (109 chunks in that prior language, filling in the chunker evaluation's blind spot for it).
 - **Two query types** (the core of the design):
 
   | Type | Count | Construction | Golden | What it tests |
@@ -112,12 +112,12 @@ While running indexing, we repeatedly hit apparent hangs, and we **fully worked 
 
 | | measured char/token | current heuristic | deviation |
 |---|---|---|---|
-| Chinese (431) | 1.513 | 1.7 | token count underestimated by 11% |
+| Prior non-English language (431) | 1.513 | 1.7 | token count underestimated by 11% |
 | English (2496) | 4.340 | 4.0 | token count overestimated by 8% |
 
 By document type (char/token): academic **3.83** / law **3.87** / financial_report_en **5.08** / government **5.35** / financial_research_zh 1.51.
 
-- **The real dividing line is "prose vs. number-dense," not "Chinese vs. English"**: English prose (academic/law) ≈ 3.85, almost exactly the current value of 4.0 (error < 4%); the deviation comes entirely from number/table-dense documents (financial reports/government 5.0+).
+- **The real dividing line is "prose vs. number-dense," not "the prior non-English language vs. English"**: English prose (academic/law) ≈ 3.85, almost exactly the current value of 4.0 (error < 4%); the deviation comes entirely from number/table-dense documents (financial reports/government 5.0+).
 - A single coefficient can't serve both clusters, and switching to the overall mean (English 4.34) would actually hurt the most common case, prose documents.
 - Both directions of error are absorbed downstream: overestimating tokens → chunks come out a bit small → small-to-big compensates at query time (nothing is lost); underestimating → chunks come out a bit large, but still well under Qwen3-VL's 32k ceiling. The 32k ceiling only protects dense; production's sparse route is **BM25** (jieba tokenization has no window limit, so it's unaffected by oversized chunks — the evaluation's BGE-M3 512-token window doesn't apply in production).
 
