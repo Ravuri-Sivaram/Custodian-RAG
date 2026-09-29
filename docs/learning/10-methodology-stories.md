@@ -4,6 +4,13 @@
 > This piece isn't about how any particular component was implemented — it's about how this project **got built, got verified, and got its own conclusions overturned and corrected** — four methodology threads, plus 12 STAR stories you can take straight into behavioral interview questions.
 > Interview weight: **extremely high**. System-design questions test knowledge; behavioral questions test whether "you actually did this and actually thought it through" — this piece is the ammunition for the latter.
 > Prerequisite reading: none required; it helps to skim [07 Evaluation Methodology](07-evaluation.md) first, since a lot of the "evidence" in this piece's stories comes from that evaluation system.
+>
+> **Note (this fork):** the stories and Lab 2 code example below that involve Chinese-language text (the CJK no-space
+> sentence-splitting bug, the reset-aware heading fix measured on a real Chinese research report, the Chinese-phrased
+> motivating case) predate this fork's replacement of Chinese-language support with Telugu (see the top-level README).
+> They're kept as genuine historical findings/record and have not been re-measured against Telugu — in particular, the
+> no-space sentence-splitting bug is CJK-specific and doesn't reproduce with Telugu, since Telugu, unlike Chinese, is
+> written with spaces between words.
 
 ---
 
@@ -272,7 +279,7 @@ promote_bare = all(bare_seq[i] > bare_seq[i - 1] for i in range(1, len(bare_seq)
 
 to `promote_bare = True` (reverting to the old "bare numbering always gets promoted" behavior), then rerun the same command — the regression test near [tests/engine/test_core.py:324](../../tests/engine/test_core.py#L324) that checks "a weekly-report-style document whose numbering restarts (1,2,1,2) must not get promoted" will turn red. This is exactly what §2.2 means by "a guard test must turn red when the fix is deleted." **Remember to revert it when you're done.**
 
-More advanced (requires installing the engine dependencies — `pip install -e ".[dev]"` plus the torch CPU build is enough; a bare Windows machine missing jieba/torch will get an ImportError at collection time): do the same thing to the two TransportError guard tests at [tests/engine/test_remote.py:290](../../tests/engine/test_remote.py#L290) — change [src/embedder/remote.py:92](../../src/embedder/remote.py#L92)'s `except httpx.TransportError` back to `except (httpx.ConnectError, httpx.TimeoutException)`, and experience exactly how the "docker kill goes unnoticed" chain breaks.
+More advanced (requires installing the engine dependencies — `pip install -e ".[dev]"` plus the torch CPU build is enough; a bare Windows machine missing torch will get an ImportError at collection time): do the same thing to the two TransportError guard tests at [tests/engine/test_remote.py:290](../../tests/engine/test_remote.py#L290) — change [src/embedder/remote.py:92](../../src/embedder/remote.py#L92)'s `except httpx.TransportError` back to `except (httpx.ConnectError, httpx.TimeoutException)`, and experience exactly how the "docker kill goes unnoticed" chain breaks.
 
 ### Experiment two (pure CPU): reproduce a "confirmed but deferred" real bug yourself
 

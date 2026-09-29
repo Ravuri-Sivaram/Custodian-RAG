@@ -1,5 +1,9 @@
 # vLLM Inference Backend Plan (Plan B → promote to Plan A once it clears the gates)
 
+> **Note (this fork):** §4's G1 vector-equivalence sample (Chinese/English texts) predates this fork's swap of
+> Chinese-language support for Telugu. The measured cosine numbers are kept as historical record and have not been
+> re-measured against Telugu text.
+
 > Positioning: **not a replacement — coexistence first**. The existing self-contained FastAPI inference service
 > (`inference_server.py`) stays as Plan A; a new vLLM backend is added as Plan B, **presenting the exact same
 > `/embed`/`/rerank`/`/readyz` contract** — not a single byte of the application layer (custodian's `remote.py`)

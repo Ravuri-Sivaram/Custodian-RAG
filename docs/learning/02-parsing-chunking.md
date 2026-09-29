@@ -1,5 +1,11 @@
 # 02 Document Parsing and Chunking
 
+> **Note (this fork):** several stories below (the AP4706 reset-aware fix, the CJK sentence-splitting bug, the
+> `est_tokens` char/token calibration) were measured against real Chinese-language documents, from before this fork
+> replaced Chinese-language support with Telugu (see the top-level README's Technology stack table). They're kept as
+> genuine historical findings — including the CJK sentence-splitting bug, which doesn't apply to Telugu since Telugu,
+> unlike Chinese, is written with spaces between words — and have not been re-measured against Telugu documents.
+
 > **How to read this piece**: covers custodian's parsing layer (the unified MinerU entry point + the Element seam) and chunking layer (multi-signal heading-tree reconstruction, doc_type-based budgeting, asset atomization, query-time small-to-big).
 > **Interview weight: High** — chunking is the layer in RAG where it shows most clearly whether you've actually worked with real-world corpora, and this piece contains the two best stories in the whole project: reset-aware promotion of bare numbering, and the 66.6ms measurement that killed its own lazy design.
 > **Prerequisite reading**: none required; for where the evaluation numbers and their basis come from, see [07 Evaluation Methodology](07-evaluation.md) and [../methodology/CHUNKING_EVALUATION.md](../methodology/CHUNKING_EVALUATION.md).

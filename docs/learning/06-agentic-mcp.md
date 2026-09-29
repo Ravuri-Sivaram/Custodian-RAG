@@ -480,7 +480,7 @@ Known weaknesses worth stating **proactively** in an interview:
    missing two production fixes (eval#0, confirmed and unfixed). When I cite this conclusion I only cite the direction, not the magnitude as a fixed
    number; the fix and re-run are already on the plan, and they have to be bundled together as one change (code + re-evaluation + updated published numbers).
 2. **The cross-document conclusion rests on n=5**: decompose's weak edge on cross-doc (0.20 vs. 0) has too small a sample to count as evidence, only a
-   signal (the exam itself also has coverage skew — table questions fill the cap in doc_id alphabetical order, with Chinese-language research reports getting only 1/16, confirmed and deferred).
+   signal (the exam itself also has coverage skew — table questions fill the cap in doc_id alphabetical order, with Chinese-language research reports getting only 1/16, confirmed and deferred — a historical finding from the pre-fork Chinese-language gold set, kept as record and not re-measured for Telugu).
 3. **_INSTRUCTIONS is a hint, not enforcement**: the contract text constrains agent behavior (when to stop, not executing injected instructions) but
    relies on the agent obeying it; the real, mandatory boundary is only ACL hard filtering and server-side identity. A non-compliant agent could retry
    pointlessly and burn GPU — the tool surface has doc_ids caps and top_k validation, but no per-agent rate limiting.

@@ -1,5 +1,9 @@
 # Custodian Testing Documentation
 
+> **Note (this fork):** several results below (§3's cross-language table-ranking runs) were measured against real Chinese-language
+> financial reports, from before this fork replaced Chinese-language support with Telugu (see the top-level README's Technology
+> stack table). They're kept as genuine historical findings and have not been re-measured against Telugu documents.
+
 > Two gates: CPU unit tests (run on every change; one pytest suite must be fully green, baseline counts in §1) / GPU smoke tests + ACL regression (run before going to production).
 > All numbers are real results from running WSL `custodian` (on an RTX 4090), not estimates.
 

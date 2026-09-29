@@ -4,6 +4,11 @@
 > This chapter covers the "G" in RAG — everything that happens between a retrieval hit and a cited answer: prompt assembly, the `[cite:n]` citation protocol, bidirectional injection defense, the three-layer grounding defense, pluggable LLMs, and two textbook-grade diagnostic stories (the ③ table-value grounding case and the N7 numeric-range misanswer case).
 > **Interview weight: high.** Grounding/hallucination/citation attribution are must-ask questions in RAG interviews, and almost all the material in this chapter is backed by measured data.
 > Suggested prior reading: the retrieval and context-assembly chapters (to understand where big-block / content_raw / section_path come from), and the evaluation methodology in [07 Evaluation Methodology](07-evaluation.md).
+>
+> **Note (this fork):** §5's Chinese-language numeric-question findings (the cross-language table-ranking gap, the `est_tokens`
+> underestimate on Chinese text) were measured before this fork replaced Chinese-language support with Telugu (see the
+> top-level README). Kept as genuine historical findings, not re-measured against Telugu documents; the "long unspaced
+> sentences" chunk-budget issue specifically doesn't apply to Telugu, since Telugu is written with spaces between words.
 
 ---
 
@@ -133,7 +138,7 @@ Product-level assembly is at [src/custodian/engine.py:52-61](../../src/custodian
 
 ### 2.8 smart-ask: failure-driven table supplementary retrieval (product layer)
 
-Users shouldn't need to understand knobs (kind/rerank), but the closed pipeline shouldn't turn into an invisible agent either. [src/generator/signals.py](../../src/generator/signals.py) provides zero-LLM lightweight rules: `looks_numeric` (deliberately biased toward permissive), `is_refusal` (Chinese and English refusal patterns), `DEFAULT_TABLE_LEG` (kind=table, top_k=5, rerank=True, rerank_top_n=50). The flow ([src/custodian/service.py:336-353](../../src/custodian/service.py#L336)): the first round is **pure**; when the question is numeric and the first round refused, ask again once with a table leg attached — each leg retrieves independently, is deduplicated by chunk_id, and gets **appended after the main hits** (a union, not a replacement, [src/generator/generate.py:54-64](../../src/generator/generate.py#L54)); the retry is hard-capped at one attempt, **best-of adoption**; every automatic behavior leaves a trace in the response's `auto` field.
+Users shouldn't need to understand knobs (kind/rerank), but the closed pipeline shouldn't turn into an invisible agent either. [src/generator/signals.py](../../src/generator/signals.py) provides zero-LLM lightweight rules: `looks_numeric` (deliberately biased toward permissive), `is_refusal` (Telugu and English refusal patterns), `DEFAULT_TABLE_LEG` (kind=table, top_k=5, rerank=True, rerank_top_n=50). The flow ([src/custodian/service.py:336-353](../../src/custodian/service.py#L336)): the first round is **pure**; when the question is numeric and the first round refused, ask again once with a table leg attached — each leg retrieves independently, is deduplicated by chunk_id, and gets **appended after the main hits** (a union, not a replacement, [src/generator/generate.py:54-64](../../src/generator/generate.py#L54)); the retry is hard-capped at one attempt, **best-of adoption**; every automatic behavior leaves a trace in the response's `auto` field.
 
 Key point: the Custodian service and `eval --smart-tables` **share the signals module** ([eval/run_eval.py:78-104](../../eval/run_eval.py#L78)) — a single source prevents wordlist drift, so **the exam runs the exact production behavior**. For why the design is failure-driven rather than a front-loaded leg, that's a verdict reached by a four-round, 88-question experiment — see Section 3.
 
@@ -240,7 +245,7 @@ Key point: the 88-question measurement showed the front-loaded leg pushed table 
 Key point: the round with top_n=30 looked good on the metrics but failed on the flagship case — a five-year summary table was ranked 31–50 in coarse ranking, and **the reranking pool was too shallow to even hold it**, so the retry leg was effectively a no-op. Principle: reranking corrects ordering, but only if the candidate is in the pool to begin with; the pool's depth must be ≥ the worst rank of the correct block in coarse ranking.
 
 **Q8: Isn't your refusal detection just keyword regex — isn't that fragile?**
-Key point: acknowledge it's a lightweight rule (signals.py's Chinese/English refusal patterns), deliberately biased toward being permissive by design — the cost of a false trigger is just one extra union-based supplementary retrieval (cheap), while the cost of a missed trigger is an incomplete answer on a numeric question (expensive). Key engineering point: **eval and production share the exact same module**, so the wordlist never drifts, and the exam runs the exact production behavior. Acknowledge the boundary: switching to a different answer language/style would require maintaining the wordlist — an accepted tradeoff.
+Key point: acknowledge it's a lightweight rule (signals.py's Telugu/English refusal patterns), deliberately biased toward being permissive by design — the cost of a false trigger is just one extra union-based supplementary retrieval (cheap), while the cost of a missed trigger is an incomplete answer on a numeric question (expensive). Key engineering point: **eval and production share the exact same module**, so the wordlist never drifts, and the exam runs the exact production behavior. Acknowledge the boundary: switching to a different answer language/style would require maintaining the wordlist — an accepted tradeoff.
 
 ---
 

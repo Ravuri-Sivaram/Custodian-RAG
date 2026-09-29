@@ -1,5 +1,10 @@
 # Architecture / Design
 
+> **Note (this fork):** §7's adversarial-review findings and the "Chinese research reports" leveling tier below were
+> measured against a real Chinese-language dataset (`financial_research_zh`), from before this fork replaced
+> Chinese-language support with Telugu (see the top-level README). Kept as genuine historical findings, not re-measured
+> against Telugu documents.
+
 ## 1. Position in the pipeline
 
 ```

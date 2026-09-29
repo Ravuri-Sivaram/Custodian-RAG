@@ -16,12 +16,11 @@ Each RAG component was sharpened on its own, then folded into one repository: mu
 
 </div>
 
-> **A note on language.** The code, CLI, comments and commit history are entirely in
-> English. The deep-dive documentation under `docs/` — including the 12-part learning
-> series — is written in Chinese and has not been translated (see [What this fork
-> changed](#what-this-fork-changed) below for exactly what was and wasn't touched).
-> This README is the English entry point: what the system is, how it's put together,
-> and how to run it.
+> **A note on language.** The code, CLI, comments, deep-dive documentation under `docs/`
+> (including the 12-part learning series), and commit history are entirely in English.
+> The system's non-English *data* language is Telugu (see [What this fork
+> changed](#what-this-fork-changed) below) — that's a separate thing from what language
+> the project's own text is written in.
 
 ---
 
@@ -33,7 +32,7 @@ This is not another chunking toy. Every significant decision here is backed by a
 
 Starting from the upstream project, this fork did four things, in this order, without changing the retrieval/generation logic or the request contracts:
 
-1. **Translated every source comment and docstring from Chinese to English** — all 37 files and roughly 1,140 lines across `src/`. Internal review shorthand that had accumulated in the comments (tags like `R1`–`R5`, `B3.A`, `"seal review #9"`) was rewritten as plain descriptive prose rather than carried over as opaque codes. `docs/` was deliberately left as-is — it's a large, separate 12-part learning series, and translating it is a bigger, separate project from cleaning up the code that ships.
+1. **Translated every source comment, docstring, and `docs/` page from Chinese to English** — 37 source files (~1,140 lines) plus the full `docs/` tree, including the 12-part learning series. Internal review shorthand that had accumulated in the comments (tags like `R1`–`R5`, `B3.A`, `"seal review #9"`) was rewritten as plain descriptive prose rather than carried over as opaque codes. Where a `docs/` page discusses historical numbers measured specifically against the original Chinese-language dataset (before this fork replaced Chinese-language support with Telugu — see below), the prose was translated but the measurements were left as historical record rather than silently relabeled "Telugu," with an inline note where that matters (e.g. [docs/components/embedder/DESIGN.md](docs/components/embedder/DESIGN.md)).
 2. **Renamed six modules whose names didn't say what they held**, and updated every import across `src/`, `tests/`, `scripts/`, and `docs/` to match (see the table below). No public package API changed — `from chunker import Chunker`, `from embedder import Retriever`, `from generator import Generator` all still work exactly as before, because these were internal file renames, not package-interface changes.
 3. **Fixed one algorithmic hot spot and one batching gap**, both verified behavior-preserving against the original before being applied (see [Optimizations](#optimizations-in-this-fork)).
 4. **Reviewed the dependency stack for better alternatives** — one dependency added (a dev-only linter), nothing swapped out; see [Technology stack](#technology-stack) for the reasoning on each choice.
@@ -98,7 +97,7 @@ Both doors share one set of semantics, held in place by two rules: the tool cont
 <img src="docs/assets/architecture.svg" alt="Custodian architecture: consumers → daemon → backing services" width="100%">
 </div>
 
-**Why a resident daemon?** Embedded Qdrant admits a single client and holds an exclusive lock, and an 8B model takes a minute or two just to load. Under the earlier stdio-direct design, every agent session spawned its own process — fighting over the lock and reloading the model each time. Custodian inverts that: the daemon owns the heavy resources, MCP shrinks to a thin HTTP adapter (`custodian/mcp_adapter.py`) that starts in milliseconds, and every session shares one already-warm backend. The trade-offs behind this are in [docs/DESIGN.md](docs/DESIGN.md) (Chinese).
+**Why a resident daemon?** Embedded Qdrant admits a single client and holds an exclusive lock, and an 8B model takes a minute or two just to load. Under the earlier stdio-direct design, every agent session spawned its own process — fighting over the lock and reloading the model each time. Custodian inverts that: the daemon owns the heavy resources, MCP shrinks to a thin HTTP adapter (`custodian/mcp_adapter.py`) that starts in milliseconds, and every session shares one already-warm backend. The trade-offs behind this are in [docs/DESIGN.md](docs/DESIGN.md).
 
 **Module map** (post-rename; see [above](#files-renamed-for-clarity) for what changed):
 
@@ -135,7 +134,7 @@ The single-node problem is that the GPU model, embedded Qdrant and application l
 docker compose --env-file .env.compose up -d --scale custodian=3   # entry point: http://127.0.0.1:8080
 ```
 
-One thing worth stating plainly: **the throughput ceiling is the forward speed of a single inference card (the GPU serialises), and adding replicas does not raise it.** What replicas actually buy you is concurrency in the non-GPU parts, plus crash isolation and rolling upgrades. The full write-up is in [docs/SCALE_OUT.md](docs/SCALE_OUT.md) (Chinese).
+One thing worth stating plainly: **the throughput ceiling is the forward speed of a single inference card (the GPU serialises), and adding replicas does not raise it.** What replicas actually buy you is concurrency in the non-GPU parts, plus crash isolation and rolling upgrades. The full write-up is in [docs/SCALE_OUT.md](docs/SCALE_OUT.md).
 
 </details>
 
@@ -198,7 +197,7 @@ Custodian-RAG/
 ├── deploy/                       # nginx.conf for the multi-replica production shape
 ├── docs/                         # design docs, ops runbooks, and the 12-part learning series
 │   ├── components/               # per-component design docs (chunker/embedder/generator)
-│   ├── learning/                 # RAG learning/interview-prep series (Chinese, untranslated)
+│   ├── learning/                 # RAG learning/interview-prep series
 │   ├── methodology/
 │   ├── archive/
 │   └── assets/                   # architecture diagrams
@@ -238,7 +237,7 @@ sudo systemctl start custodian
 
 ## Want to understand RAG, not just use it?
 
-The repository also carries a **[RAG learning and interview-prep set](docs/learning/)**: this system — repeatedly contradicted by its own data and repeatedly fixed — taken apart into **12 pieces and 4,122 lines** of tutorial. It runs from chunking, hybrid retrieval, the permission model and generation grounding all the way through agentic use, evaluation methodology and multi-replica scale-out. Every piece carries code anchors, measured numbers, interview framings, and experiments you can run yourself. **Written in Chinese** (not touched by this fork — see [What this fork changed](#what-this-fork-changed)).
+The repository also carries a **[RAG learning and interview-prep set](docs/learning/)**: this system — repeatedly contradicted by its own data and repeatedly fixed — taken apart into **12 pieces and 4,122 lines** of tutorial. It runs from chunking, hybrid retrieval, the permission model and generation grounding all the way through agentic use, evaluation methodology and multi-replica scale-out. Every piece carries code anchors, measured numbers, interview framings, and experiments you can run yourself. Translated from the original Chinese to English by this fork (see [What this fork changed](#what-this-fork-changed)).
 
 | What you want | Which pieces |
 |---|---|
@@ -273,7 +272,7 @@ python -m custodian keys new bob   --tenant demo --principals g_eng
 sudo systemctl restart custodian
 ```
 
-Configuration lives in the single `.env` at the repository root (see [.env.example](.env.example); everything is prefixed `CUSTODIAN_*`): `CUSTODIAN_KEYS_FILE`, `CUSTODIAN_CORPUS_DIR`, `CUSTODIAN_INDEX_DIR` (defaults to `~/rag_real`), `CUSTODIAN_COLLECTION`, `CUSTODIAN_PORT` (8787), `CUSTODIAN_HOST` (a non-loopback bind forces keys mode), `CUSTODIAN_LOG_DIR`, and `DEEPSEEK_API_KEY` (needed by `/v1/ask`). The full deployment, key and operations procedures are in [docs/OPERATIONS.md](docs/OPERATIONS.md) (Chinese).
+Configuration lives in the single `.env` at the repository root (see [.env.example](.env.example); everything is prefixed `CUSTODIAN_*`): `CUSTODIAN_KEYS_FILE`, `CUSTODIAN_CORPUS_DIR`, `CUSTODIAN_INDEX_DIR` (defaults to `~/rag_real`), `CUSTODIAN_COLLECTION`, `CUSTODIAN_PORT` (8787), `CUSTODIAN_HOST` (a non-loopback bind forces keys mode), `CUSTODIAN_LOG_DIR`, and `DEEPSEEK_API_KEY` (needed by `/v1/ask`). The full deployment, key and operations procedures are in [docs/OPERATIONS.md](docs/OPERATIONS.md).
 
 </details>
 
@@ -290,7 +289,7 @@ Neither touches a GPU, a Qdrant server or the network, and [CI](.github/workflow
 
 ## Documentation index
 
-All documentation below is in Chinese and reflects the pre-fork module names in a few places (the file renames above haven't been propagated into `docs/` yet — the code itself is the source of truth).
+This documentation reflects the pre-fork module names in a few places (the file renames above haven't been propagated into `docs/` yet — the code itself is the source of truth).
 
 | Document | What it covers |
 |---|---|

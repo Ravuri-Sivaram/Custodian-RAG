@@ -4,6 +4,10 @@
 > to `../analysis/CHUNKING_STRATEGY.md` and `EVALUATION.md`, it refers to the old repo's layout (not carried over during migration, so demoted to plain text to avoid pointing at a 404). The current version lives at
 > [docs/components/chunker/](../components/chunker/) and [CHUNKING_EVALUATION.md](../methodology/CHUNKING_EVALUATION.md).*
 
+> **Note (this fork):** §7's "Chinese /1.7" token-estimation figure describes the original prototype's Chinese-language
+> support, before this fork replaced it with Telugu (see the top-level README). Kept as historical record, not re-measured
+> for Telugu.
+
 > Purpose: turn the PDF → retrievable-chunk process into an engineering system that is **reusable, auditable, and tunable**.
 > This document covers "why it's designed this way"; implementation details are in [IMPLEMENTATION.md](engine-prototype-IMPLEMENTATION.md); process and rationale are in [PROCESS_LOG.md](PROCESS_LOG.md); strategy rationale is in `../analysis/CHUNKING_STRATEGY.md`.
 

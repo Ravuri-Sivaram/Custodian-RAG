@@ -8,6 +8,10 @@ ingest → parse → [ chunker ] → embed
 
 Splits a parser's output into **chunks carrying a hierarchical skeleton (breadcrumb + section tree)** for the embedding stage to embed and store, and at query time provides **small-to-big** big-block assembly. Pure Python, **zero runtime dependencies**. The core logic has been validated on **77 real documents + multiple rounds of adversarial review**, and it ships with **42** unit tests, all passing (`test_core.py` + `test_table.py`).
 
+> **Note (this fork):** the "cover-page-dense Chinese research reports" example below is a real historical leveling
+> finding (measured against `financial_research_zh`, from before this fork replaced Chinese-language support with
+> Telugu — see the top-level README), kept as genuine record and not re-measured against Telugu documents.
+
 > **Five formats verified**: PDF (MinerU, 77 documents) / scanned PDF (OCR, 40 documents, 13 languages) / **Word (.docx), PPT (.pptx)** via MinerU's native office backend (~50 documents each; `adapters/docx.py`/`pptx.py` demoted to zero-dependency fallbacks) / **Excel (.xlsx)** via the separate `table_chunker.py` (a grid, not a document flow — the heading-tree doesn't apply, but it outputs the same Chunk schema). See [`ARCHITECTURE.md` §Format coverage](ARCHITECTURE.md) and [`../../methodology/MULTIFORMAT_IMPL.md`](../../methodology/MULTIFORMAT_IMPL.md).
 > For the design motivation, trade-offs, and the conclusions of three rounds of adversarial review, see [`ARCHITECTURE.md`](ARCHITECTURE.md) and [`../../methodology/LAZY_HEADING_TREE_DESIGN.md`](../../methodology/LAZY_HEADING_TREE_DESIGN.md) (v2).
 

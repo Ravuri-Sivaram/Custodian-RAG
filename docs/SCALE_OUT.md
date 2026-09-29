@@ -16,7 +16,7 @@
 > **Rollout discipline**: propose before changing, each phase independently verifiable, every "fixed" claim must come with
 > a reproduction command + a before/after measurement comparison.
 > **Environment prerequisite (required before any verification command)**: in WSL, `conda activate custodian && cd <repo> && pip install -e '.[dev]'`.
-> If the core dependencies (jieba/qdrant-client etc.) are not fully installed, running `pytest` directly will produce a
+> If the core dependencies (qdrant-client etc.) are not fully installed, running `pytest` directly will produce a
 > **collection error**, not a genuine test failure.
 
 ---

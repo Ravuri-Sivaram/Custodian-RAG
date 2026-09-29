@@ -4,6 +4,11 @@
 > This isn't another technical write-up — it's the previous ten pieces reorganized into **interview-day ammunition**: a topic-clustered question bank, with three layers per question — the general-purpose answer that doesn't depend on this project, the bonus-point answer built on Custodian's experience and data, and how an interviewer would likely follow up.
 > **How to use it**: read through once the day before the interview to build an index; in the hour before the interview, only look at the **bolded keywords** for each question and the "data basis quick-reference" at the top. When you want to go deep on a single topic, go back to the corresponding piece's "anticipated follow-up questions" section (this piece points there a lot rather than duplicating the content).
 > **Discipline**: every number here is tagged with its basis, and **the four evaluation lines must never be mixed** (see the quick-reference table); whenever an agentic net negative is mentioned, it must carry the "eval#0 assembly bias, magnitude pending re-evaluation" caveat — volunteering this caveat is itself a bonus point.
+>
+> **Note (this fork):** several stories below (the reset-aware heading fix measured on a real Chinese research report, the
+> 15-document corpus composition, `jieba`'s exact-string-fragmentation story) predate this fork's replacement of
+> Chinese-language support with Telugu (see the top-level README). Kept as genuine historical record, not re-measured
+> against Telugu.
 
 ---
 
@@ -59,7 +64,7 @@ The vast majority of "the numbers don't add up" failures come from subtracting n
 
 **Custodian's bonus-point answer**: it's not resistance to frameworks — the value is exactly where a framework can't help: heading-tree reconstruction, ACL push-down into prefetch, ACL-aware material fetching for small-to-big, the de-biased evaluation loop — all of these have to be written right up against Qdrant and the corpus. And I've kept the seams open (an Element adapter, a pluggable LLM protocol, duck-typed retrievers), so I'm not against using a framework around the edges. At the chunking layer I'll even **admit the boundary algorithm alone slightly loses to chonkie** (see Q2.1) — the moat is engineering integration, not the algorithm. Details in [01 follow-up 1](01-rag-overview.md), [02 follow-up Q1](02-parsing-chunking.md).
 
-**Follow-up tree**: "So isn't reinventing the wheel expensive?" → what's being built is "the handful of things a framework can't give you"; standard parts (FastAPI, Qdrant, jieba, httpx) are all in use.
+**Follow-up tree**: "So isn't reinventing the wheel expensive?" → what's being built is "the handful of things a framework can't give you"; standard parts (FastAPI, Qdrant, httpx) are all in use.
 
 ### Q1.5 "Retrieval, chunking, generation — which is RAG's real ceiling?" (cross-piece synthesis)
 
@@ -161,7 +166,7 @@ The vast majority of "the numbers don't add up" failures come from subtracting n
 
 **General-purpose answer**: BM25 looks simple, but tokenization and hashing are the two places most likely to fail silently.
 
-**Custodian's bonus-point answer**: three sharp edges. ① **Exact-string preservation**: jieba would chop up `GPT-4`/`v1.2`/long serial numbers, and exact strings are precisely the reason BM25 was chosen — a regex fully preserves alphanumeric strings, but **only supplements what jieba failed to fully extract**, or the doc-side tf gets double-counted (an alphanumeric token appended once by jieba and once by the regex, while pure-Chinese tokens aren't double-counted, systematically skewing the BM25 weights). ② **Stable hashing**: token→index uses FNV-1a, explicitly not Python's built-in `hash()` — the latter is randomized across processes, so the indexing process and the query process would hash the same word to different indices, and doc/query would never line up, silently showing up as "why is the sparse path recalling so poorly." ③ the semantics of values on both ends: doc-side tf, query-side 1.0, with scoring left to Qdrant's server-side `Modifier.IDF`.
+**Custodian's bonus-point answer**: three sharp edges. ① **Exact-string preservation**: the current tokenizer is regex-based, not a dictionary segmenter — a Telugu-Unicode-block regex and an alphanumeric-exact-string regex have disjoint character classes, so `GPT-4`/`v1.2`/long serial numbers are captured whole by the alphanumeric regex with no double-counting possible by construction. (Historical note: the pre-fork tokenizer used `jieba` for Chinese word segmentation, which *would* chop up `GPT-4`/`v1.2` into fragments, so the exact-string regex back then needed an explicit "only supplement what jieba failed to fully extract" rule to avoid the doc-side tf getting double-counted — that failure mode doesn't exist in the current Telugu-regex design.) ② **Stable hashing**: token→index uses FNV-1a, explicitly not Python's built-in `hash()` — the latter is randomized across processes, so the indexing process and the query process would hash the same word to different indices, and doc/query would never line up, silently showing up as "why is the sparse path recalling so poorly." ③ the semantics of values on both ends: doc-side tf, query-side 1.0, with scoring left to Qdrant's server-side `Modifier.IDF`.
 
 **Follow-up tree**: "How would you even discover a hash-randomization bug like this?" → it only shows up as degraded recall quality, with no error — so you need a component-level eval acting as a sentinel. This is another instance of the "silent failure" motif.
 

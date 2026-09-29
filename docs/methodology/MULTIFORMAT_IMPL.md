@@ -53,7 +53,7 @@ But docx has a signal MinerU doesn't: **direct character formatting**. Quantifie
 | sections | 472 | **674** |
 | content orphans | 0 | **0** |
 
-Examples of flat→structured: bylaws 0→22, legal_berkeley 0→23, lugov 0→29, Portuguese ecdc 0→22. Documents that **remained flat** (mit_esp pure prose / cngov Chinese form / CV / financial statement) are ones with **genuinely no heading structure** — inference did not force anything, correctly.
+Examples of flat→structured: bylaws 0→22, legal_berkeley 0→23, lugov 0→29, Portuguese ecdc 0→22. Documents that **remained flat** (mit_esp pure prose / cngov Chinese form [part of the pre-fork Chinese-language corpus, kept as historical record — see this fork's Telugu swap in the top-level README] / CV / financial statement) are ones with **genuinely no heading structure** — inference did not force anything, correctly.
 
 ## 3. pptx adapter (`chunker/src/chunker/adapters/pptx.py`)
 

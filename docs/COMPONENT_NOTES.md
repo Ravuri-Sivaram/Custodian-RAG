@@ -7,6 +7,10 @@
 > Convention: **objections, fixes, and deliberate non-fixes** for engine components are recorded here, each with motivation + action + verification.
 > The corresponding changes have matching commits in this repo's git history.
 
+> **Note (this fork):** the Chinese-phrased anecdotes below (the motivating regression case, the cross-language table-ranking
+> tests) predate this fork's replacement of Chinese-language support with Telugu (see the top-level README). Kept as
+> genuine historical record, not re-measured against Telugu.
+
 ## Fixed
 
 ### N1: MCP-server tool semantics were coupled to the stdio transport — split out toolcore

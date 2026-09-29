@@ -4,6 +4,11 @@
 > This chapter covers Custodian's evaluation loop: synthesize gold data → run the real system → LLM judges → attribution, along with the debiasing design behind it, the five-metric layering, the reproducibility tiering, and the complete real-world story of "the evaluation pipeline itself can have bugs."
 > **Interview weight: the highest of the whole set.** "How do you evaluate RAG" is a must-ask question, and most candidates only have a one-word answer ("ragas") — this chapter gives you a whole framework that can hold up against 20 minutes of continuous follow-up questions.
 > Suggested prior reading: [01 RAG Overview](01-rag-overview.md), [05 Generation and Grounding](05-generation-grounding.md); engineering details in [eval/README.md](../../eval/README.md) and [docs/TESTING.md §3](../TESTING.md).
+>
+> **Note (this fork):** the gold-question findings that name "Chinese-language research reports" (eval#3's coverage skew, the
+> 15-document corpus composition in §8) describe the pre-fork Chinese-language evaluation corpus, from before this fork
+> replaced Chinese-language support with Telugu (see the top-level README). Kept as genuine historical findings, not
+> re-measured against Telugu documents.
 
 ---
 

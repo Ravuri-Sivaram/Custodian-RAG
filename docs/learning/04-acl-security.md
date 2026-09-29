@@ -252,7 +252,7 @@ Point to make: ① the ACL semantics are single-sourced (acl.py) + the two imple
 
 ### Lab 1 (CPU): reproduce the "embedded fusion drops should" fail-open by hand
 
-Prerequisite: the repo already `pip install -e .`'d (needs qdrant-client, jieba; under WSL, `conda activate custodian`). The principle is in §2.2; the script uses an `:memory:` store and random dense vectors (no GPU/model needed), with five points covering public/restricted/cross-tenant/unset ACL types:
+Prerequisite: the repo already `pip install -e .`'d (needs qdrant-client; under WSL, `conda activate custodian`). The principle is in §2.2; the script uses an `:memory:` store and random dense vectors (no GPU/model needed), with five points covering public/restricted/cross-tenant/unset ACL types:
 
 ```bash
 python - <<'PY'
